@@ -1,0 +1,8 @@
+---
+- name: Create/update DataService Security Groups
+  hosts: stack
+  become: yes
+  vars:
+     git_remote_branch : "{{GIT_REMOTEBRANCH}}"
+  roles:
+    - infra-as-code
