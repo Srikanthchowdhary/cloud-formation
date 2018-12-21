@@ -1,0 +1,1305 @@
+{
+    "AWSTemplateFormatVersion": "2010-09-09",
+    "Description": "Application ec2 servers",
+    "Metadata": {
+        "About": {
+            "Author": {"value": "DevOps Engineering Team"},
+            "Contact": {"Value": "cwdsdevopsengineering@osi.ca.gov"},
+            "CreatedDate": {"Value": "May 22, 2018"},
+            "UpdatedDate": {"Value": "{{ansible_date_time.date}}"}
+        }
+    },
+    "Parameters": {
+        "EnvName": {
+            "Description": "Enviroment name",
+			"Type": "String"
+        },
+        "PatchGroups1" : {
+            "Description": "Patch Group name",
+			"Type": "String"
+        },
+        "PatchGroups2" : {
+            "Description": "Patch Group name",
+			"Type": "String"
+        },
+        "PatchGroups3" : {
+            "Description": "Patch Group name",
+			"Type": "String"
+        },
+        "PublicSubnet2A":{
+            "Description": "Public Zone A Subnet ID",
+			"Type": "AWS::EC2::Subnet::Id"
+        },
+        "PublicSubnet2C":{
+            "Description": "Public Zone C Subnet ID",
+			"Type": "AWS::EC2::Subnet::Id"
+        },
+        "PrivateSubnet2A":{
+            "Description": "Private Zone A Subnet ID",
+			"Type": "AWS::EC2::Subnet::Id"
+        },
+        "PrivateSubnet2C":{
+            "Description": "Private Zone C Subnet ID",
+            "Type": "AWS::EC2::Subnet::Id"
+        },
+        "KeyName": {	
+            "Description": "Keyfile name that needs to be added to the instances ",
+            "Type": "String"
+        },
+		"ImageID":{
+            "Description": "Image ID",
+			"Type": "String"
+        },
+		"InstanceType": {
+            "Description": "Instance Type",
+			"Type": "String"
+        },
+        "DisableApiTermination": {
+            "Description": "Api Termination",
+            "Type": "String"
+        },
+        "SSLCertificateId": {
+           "Description": "SSL Certificates",
+		    "Type": "String"
+        },
+        "idpdeploy": {
+          "Description": "condition to create idp",
+          "Type": "String"
+        },
+        "cmapideploy": {
+            "Description": "condition to create case-management api servers",
+            "Type": "String"
+        },
+        "formsapideploy": {
+            "Description": "condition to create forms api servers",
+            "Type": "String"
+        },
+        "cansdeploy": {
+            "Description": "condition to create cans servers",
+            "Type": "String"
+        },
+        "perry3node": {
+            "Description": "condition to create perry 3rd node",
+            "Type": "String"
+        },        
+        "ManagedServerRules":{
+             "Description": "Mgmt server sg",
+			"Type": "AWS::EC2::SecurityGroup::Id"
+        },
+        "WebProxyGatewaySg": {
+            "Description": "web proxy pass sg",
+			"Type": "AWS::EC2::SecurityGroup::Id"
+        },
+        "WebProxyGatewaySg2": {
+            "Description": "web proxy pass sg - avoiding circular dependency",
+			"Type": "AWS::EC2::SecurityGroup::Id"
+        },
+        "WebGatewayElbSg": {
+            "Description": "WebGateway ELB Security Group",
+			"Type": "AWS::EC2::SecurityGroup::Id"
+        },
+        "WebAppsg": {
+            "Description": "Web App sg for Intake/cals/Dashboard",
+			"Type": "AWS::EC2::SecurityGroup::Id"
+        },
+        "Appsg": {
+            "Description": "App sg UI cals/intake/dashboard",
+			"Type": "AWS::EC2::SecurityGroup::Id"
+        },
+        "Perrysg":{
+            "Description": "Perry sg",
+			"Type": "AWS::EC2::SecurityGroup::Id"
+        },
+        "WebPerryExternalsg":{
+            "Description": "Web Perry External sg",
+			"Type": "AWS::EC2::SecurityGroup::Id"
+        },
+        "IDPsg":{
+          "Description": "IDP sg",
+          "Type": "AWS::EC2::SecurityGroup::Id"
+        },
+      "Apisg": {
+            "Description": "Api sg ferb/intake/cals/dora",
+			"Type": "AWS::EC2::SecurityGroup::Id"
+        },
+        "WebApisg":{
+            "Description": "Web Api sg",
+			"Type": "AWS::EC2::SecurityGroup::Id"
+        },
+        "WebApisg2":{
+            "Description": "WebAPI security Group 2 to avaoid circular dependency",
+			"Type": "AWS::EC2::SecurityGroup::Id"
+        },
+        "proxydb2sg": {
+            "Description": "db2 security Group to connect to the proxy for db2 connection",
+			"Type": "AWS::EC2::SecurityGroup::Id"
+        }
+    },
+    "Conditions": {
+      "idpdeploy": {"Fn::Equals": [{"Ref": "idpdeploy"}, "true"]},
+      "cmapideploy": {"Fn::Equals": [{"Ref": "cmapideploy"}, "true"]},
+      "formsapideploy": {"Fn::Equals": [{"Ref": "formsapideploy"}, "true"]},
+      "cansdeploy": {"Fn::Equals": [{"Ref": "cansdeploy"}, "true"]},
+      "perry3node": {"Fn::Equals": [{"Ref": "perry3node"}, "true"]},
+      "perry2node": {"Fn::Equals": [{"Ref": "perry3node"}, "false"]}
+    },
+    "Resources": {
+        "WebGatewayA": {
+            "Type": "AWS::EC2::Instance",
+            "Metadata":{ "Comment": "Public Instance for WebGateway-proxypass and Site-Site VPN Gateway AZ 2a" },
+            "Properties": {
+                "ImageId": { "Ref": "ImageID" },
+                "BlockDeviceMappings": [
+                    {
+                        "DeviceName": "/dev/xvda",
+                        "Ebs": {
+                            "DeleteOnTermination": "true",
+                            "VolumeSize": "100"
+                        }
+                    }
+                ],
+                "InstanceType": {"Ref": "InstanceType"},
+                "SubnetId": { "Ref": "PrivateSubnet2A" },
+                "IamInstanceProfile": "Cloudwatch",
+                "Monitoring": "true",
+                "KeyName": {"Ref":"KeyName"},
+                "InstanceInitiatedShutdownBehavior": "stop",
+                "DisableApiTermination": {"Ref": "DisableApiTermination"},
+                "SecurityGroupIds": [{ "Ref": "WebProxyGatewaySg" },{"Ref": "WebProxyGatewaySg2"},{"Ref": "ManagedServerRules"}],
+                "Tags": [
+                            { "Key": "Application", "Value": {"Ref": "AWS::StackName"}},
+                            {"Key": "Environment", "Value": {"Ref": "EnvName"}},
+                            {"Key": "Name", "Value":  { "Fn::Join": ["",[{"Ref": "EnvName"},"-","web-a"]]}},
+                            {"Key": "Patch Group", "Value": {"Ref": "PatchGroups1"}}
+                        ]
+            }
+        },
+        "WebGatewayC": {
+            "Type": "AWS::EC2::Instance",
+            "Metadata":{ "Comment": "Public Instance for WebGateway-proxypass and Site-Site VPN Gateway AZ 2a" },
+            "Properties": {
+                "ImageId": { "Ref": "ImageID" },
+                "BlockDeviceMappings": [
+                    {
+                        "DeviceName": "/dev/xvda",
+                        "Ebs": {
+                            "DeleteOnTermination": "true",
+                            "VolumeSize": "100"
+                        }
+                    }
+                ],
+                "InstanceType": {"Ref": "InstanceType"},
+                "SubnetId": { "Ref": "PrivateSubnet2C" },
+                "IamInstanceProfile": "Cloudwatch",
+                "Monitoring": "true",
+                "KeyName": {"Ref":"KeyName"},
+                "InstanceInitiatedShutdownBehavior": "stop",
+                "DisableApiTermination": {"Ref": "DisableApiTermination"},
+                "SecurityGroupIds": [{ "Ref": "WebProxyGatewaySg" },{"Ref": "WebProxyGatewaySg2"},{"Ref": "ManagedServerRules"}],
+                "Tags": [
+                            { "Key": "Application", "Value": {"Ref": "AWS::StackName"}},
+                            {"Key": "Environment", "Value": {"Ref": "EnvName"}},
+                            {"Key": "Name", "Value":  { "Fn::Join": ["",[{"Ref": "EnvName"},"-","web-c"]]}},
+                            {"Key": "Patch Group", "Value": {"Ref": "PatchGroups2"}}
+                        ]
+            }
+        },
+        "ELBWebgateway": {
+           "Type": "AWS::ElasticLoadBalancing::LoadBalancer",
+           "Metadata":{ "Comment": "Webgateway server loadbalancer" },
+           "Properties": {
+              "LoadBalancerName": { "Fn::Join": ["",[{"Ref": "EnvName"},"-","web-gateway"]]},               
+              "Listeners" : [
+                  {
+                      "LoadBalancerPort": "443",
+                      "InstancePort": "443",
+                      "SSLCertificateId": {"Ref": "SSLCertificateId"},
+                      "Protocol": "HTTPS",
+                      "InstanceProtocol": "HTTPS"
+                  }
+              ],
+              "Scheme" : "internal",
+              "SecurityGroups" : [ {"Ref": "WebGatewayElbSg"}],
+              "Subnets" : [{ "Ref": "PrivateSubnet2A" }, { "Ref": "PrivateSubnet2C"}],
+              "HealthCheck": {
+                  "Target": "TCP:443",
+                  "HealthyThreshold": "3",
+                  "UnhealthyThreshold": "5",
+                  "Interval": 90,
+                  "Timeout": "10"
+              },
+              "Instances": [
+                  {"Ref": "WebGatewayA"},
+                  {"Ref": "WebGatewayC"}
+              ],
+             "Tags": [
+                  {"Key": "Environment", "Value": {"Ref": "EnvName"}},
+                  {"Key": "Role", "Value": "Applicationservers"},
+                  {"Key": "Name", "Value":  { "Fn::Join": ["",[{"Ref": "EnvName"},"-","web-gateway-elb"]]}}
+              ]
+           }
+        },
+
+        "AppServerA": {
+            "Type": "AWS::EC2::Instance",
+            "Metadata":{ "Comment": "Application Server (Intake/Cals) on AvailabilityZone west-1a" },
+            "Properties":{
+                "ImageId": { "Ref": "ImageID" },
+                "BlockDeviceMappings": [
+                    {
+                        "DeviceName": "/dev/xvda",
+                        "Ebs": {
+                            "DeleteOnTermination": "true",
+                            "VolumeSize": "100"
+                        }
+                    }
+                ],
+                "InstanceType": {"Ref": "InstanceType"},
+                "SubnetId": { "Ref": "PrivateSubnet2A" },
+                "IamInstanceProfile": "Cloudwatch",
+                "Monitoring": "true",
+                "KeyName": {"Ref":"KeyName"},
+                "InstanceInitiatedShutdownBehavior": "stop",
+                "DisableApiTermination": {"Ref": "DisableApiTermination"},
+                "SecurityGroupIds": [{ "Ref" : "Appsg"},{"Ref": "ManagedServerRules"}],
+               "Tags": [
+                  {"Key": "Environment", "Value": {"Ref": "EnvName"}},
+                  {"Key": "Role", "Value": "Applicationservers"},
+                  {"Key": "Name", "Value":  { "Fn::Join": ["",[{"Ref": "EnvName"},"-","app-a"]]}},
+                  {"Key": "Patch Group", "Value": {"Ref": "PatchGroups1"}}
+              ]
+            }
+        },
+        "AppServerC": {
+            "Type": "AWS::EC2::Instance",
+            "Metadata":{ "Comment": "Application Server (Intake/Cals) on AvailabilityZone west-1c" },
+            "Properties":{
+                "ImageId": { "Ref": "ImageID" },
+                "BlockDeviceMappings": [
+                    {
+                        "DeviceName": "/dev/xvda",
+                        "Ebs": {
+                            "DeleteOnTermination": "true",
+                            "VolumeSize": "100"
+                        }
+                    }
+                ],
+                "InstanceType": {"Ref": "InstanceType"},
+                "SubnetId": { "Ref": "PrivateSubnet2C" },
+                "IamInstanceProfile": "Cloudwatch",
+                "Monitoring": "true",
+                "KeyName": {"Ref":"KeyName"},
+                "InstanceInitiatedShutdownBehavior": "stop",
+                "DisableApiTermination": {"Ref": "DisableApiTermination"},
+                "SecurityGroupIds": [{ "Ref" : "Appsg"},{"Ref": "ManagedServerRules"}],
+               "Tags": [
+                  {"Key": "Environment", "Value": {"Ref": "EnvName"}},
+                  {"Key": "Role", "Value": "Applicationservers"},
+                  {"Key": "Name", "Value":  { "Fn::Join": ["",[{"Ref": "EnvName"},"-","app-c"]]}},
+                  {"Key": "Patch Group", "Value": {"Ref": "PatchGroups2"}}
+              ]
+            }
+        },
+        "ElbIntake": {
+           "Type": "AWS::ElasticLoadBalancing::LoadBalancer",
+           "Metadata":{ "Comment": "Intake App servers loadbalancer - region us-west-1 " },
+           "Properties": {
+              "LoadBalancerName": { "Fn::Join": ["",[{"Ref": "EnvName"},"-","intake-server"]]},               
+              "Listeners" : [
+                  {
+                      "LoadBalancerPort": "443",
+                      "InstancePort": "80",
+                      "SSLCertificateId": {"Ref": "SSLCertificateId"},
+                      "Protocol": "HTTPS",
+                      "InstanceProtocol": "HTTP"
+                  }
+              ],
+              "Scheme" : "internal",
+              "SecurityGroups" : [ {"Ref": "WebAppsg"}],
+              "Subnets" : [
+                { "Ref": "PrivateSubnet2A" }, { "Ref": "PrivateSubnet2C"}
+              ],
+              "HealthCheck": {
+                  "Target": "TCP:80",
+                  "HealthyThreshold": "3",
+                  "UnhealthyThreshold": "5",
+                  "Interval": 90,
+                  "Timeout": "10"
+              },
+              "Instances": [
+                  {"Ref": "AppServerA"},
+                  {"Ref": "AppServerC"}
+              ],
+             "Tags": [
+                  {"Key": "Environment", "Value": {"Ref": "EnvName"}},
+                  {"Key": "Role", "Value": "Applicationservers"},
+                  {"Key": "Name", "Value":  { "Fn::Join": ["",[{"Ref": "EnvName"},"-","intake"]]}}
+              ]
+           }
+        },
+        "ElbCals": {
+           "Type": "AWS::ElasticLoadBalancing::LoadBalancer",
+           "Metadata":{ "Comment": "Cals App servers loadbalancer - region us-west-1 " },
+           "Properties": {
+              "LoadBalancerName": { "Fn::Join": ["",[{"Ref": "EnvName"},"-","cals-server"]]},               
+              "Listeners" : [
+                  {
+                      "LoadBalancerPort": "443",
+                      "InstancePort": "8081",
+                      "SSLCertificateId": {"Ref": "SSLCertificateId"},
+                      "Protocol": "HTTPS",
+                      "InstanceProtocol": "HTTP"
+                  }
+              ],
+              "Scheme" : "internal",
+              "SecurityGroups" : [ {"Ref": "WebAppsg"}],
+              "Subnets" : [
+                { "Ref": "PrivateSubnet2A" }, { "Ref": "PrivateSubnet2C"}
+              ],
+              "HealthCheck": {
+                "Target": "TCP:8081",
+                "HealthyThreshold": "3",
+                "UnhealthyThreshold": "5",
+                "Interval": 90,
+                "Timeout": "10"
+              },
+              "Instances": [
+                  {"Ref": "AppServerA"},
+                  {"Ref": "AppServerC"}
+              ],
+             "Tags": [
+                  {"Key": "Environment", "Value": {"Ref": "EnvName"}},
+                  {"Key": "Role", "Value": "Applicationservers"},
+                  {"Key": "Name", "Value":  { "Fn::Join": ["",[{"Ref": "EnvName"},"-","cals"]]}}
+              ]
+           }
+        },
+      "ElbCase": {
+        "Type": "AWS::ElasticLoadBalancing::LoadBalancer",
+        "Metadata":{ "Comment": "Case-mng App servers loadbalancer - region us-west-1 " },
+        "Condition": "cmapideploy",
+        "Properties": {
+          "LoadBalancerName": { "Fn::Join": ["",[{"Ref": "EnvName"},"-","casemng-server"]]},
+          "Listeners" : [
+            {
+              "LoadBalancerPort": "443",
+              "InstancePort": "8083",
+              "SSLCertificateId": {"Ref": "SSLCertificateId"},
+              "Protocol": "HTTPS",
+              "InstanceProtocol": "HTTP"
+            }
+          ],
+          "Scheme" : "internal",
+          "SecurityGroups" : [ {"Ref": "WebAppsg"}],
+          "Subnets" : [
+            { "Ref": "PrivateSubnet2A" }, { "Ref": "PrivateSubnet2C"}
+          ],
+          "HealthCheck": {
+            "Target": "TCP:8083",
+            "HealthyThreshold": "3",
+            "UnhealthyThreshold": "5",
+            "Interval": 90,
+            "Timeout": "10"
+          },
+          "Instances": [
+            {"Ref": "AppServerA"},
+            {"Ref": "AppServerC"}
+          ],
+          "Tags": [
+            {"Key": "Environment", "Value": {"Ref": "EnvName"}},
+            {"Key": "Role", "Value": "Applicationservers"},
+            {"Key": "Name", "Value":  { "Fn::Join": ["",[{"Ref": "EnvName"},"-","casemng"]]}}
+          ]
+        }
+      },
+      "ElbCans": {
+        "Type": "AWS::ElasticLoadBalancing::LoadBalancer",
+        "Metadata":{ "Comment": "Cans App servers loadbalancer - region us-west-1 " },
+        "Condition": "cansdeploy",
+        "Properties": {
+          "LoadBalancerName": { "Fn::Join": ["",[{"Ref": "EnvName"},"-","cans-server"]]},
+          "Listeners" : [
+            {
+              "LoadBalancerPort": "443",
+              "InstancePort": "8095",
+              "SSLCertificateId": {"Ref": "SSLCertificateId"},
+              "Protocol": "HTTPS",
+              "InstanceProtocol": "HTTP"
+            }
+          ],
+          "Scheme" : "internal",
+          "SecurityGroups" : [ {"Ref": "WebAppsg"}],
+          "Subnets" : [
+            { "Ref": "PrivateSubnet2A" }, { "Ref": "PrivateSubnet2C"}
+          ],
+          "HealthCheck": {
+            "Target": "TCP:8095",
+            "HealthyThreshold": "3",
+            "UnhealthyThreshold": "5",
+            "Interval": 90,
+            "Timeout": "10"
+          },
+          "Instances": [
+            {"Ref": "AppServerA"},
+            {"Ref": "AppServerC"}
+          ],
+          "Tags": [
+            {"Key": "Environment", "Value": {"Ref": "EnvName"}},
+            {"Key": "Role", "Value": "Applicationservers"},
+            {"Key": "Name", "Value":  { "Fn::Join": ["",[{"Ref": "EnvName"},"-","cans"]]}}
+          ]
+        }
+      },
+        "ElbDashboard": {
+           "Type": "AWS::ElasticLoadBalancing::LoadBalancer",
+           "Metadata":{ "Comment": "DashBoard loadbalancer - region us-west-1 " },
+           "Properties": {
+              "LoadBalancerName": { "Fn::Join": ["",[{"Ref": "EnvName"},"-","dashboard"]]},               
+              "Listeners" : [
+                  {
+                      "LoadBalancerPort": "443",
+                      "InstancePort": "8082",
+                      "SSLCertificateId": {"Ref": "SSLCertificateId"},
+                      "Protocol": "HTTPS",
+                      "InstanceProtocol": "HTTP"
+                  }
+              ],
+              "Scheme" : "internal",
+              "SecurityGroups" : [ {"Ref": "WebAppsg"}],
+              "Subnets" : [
+                { "Ref": "PrivateSubnet2A" }, { "Ref": "PrivateSubnet2C"}
+              ],
+              "HealthCheck": {
+                  "Target": "TCP:8082",
+                  "HealthyThreshold": "3",
+                  "UnhealthyThreshold": "5",
+                  "Interval": 90,
+                  "Timeout": "10"
+              },
+              "Instances": [
+                  {"Ref": "AppServerA"},
+                  {"Ref": "AppServerC"}
+              ],
+             "Tags": [
+                  {"Key": "Environment", "Value": {"Ref": "EnvName"}},
+                  {"Key": "Role", "Value": "Applicationservers"},
+                  {"Key": "Name", "Value":  { "Fn::Join": ["",[{"Ref": "EnvName"},"-","cals"]]}}
+              ]
+           }
+        },
+        "ElbCap": {
+            "Type": "AWS::ElasticLoadBalancing::LoadBalancer",
+            "Metadata":{ "Comment": "county admin page loadbalancer - region us-west-1 " },
+            "Properties": {
+              "LoadBalancerName": { "Fn::Join": ["",[{"Ref": "EnvName"},"-","cap"]]},
+              "Listeners" : [
+                {
+                  "LoadBalancerPort": "443",
+                  "InstancePort": "8084",
+                  "SSLCertificateId": {"Ref": "SSLCertificateId"},
+                  "Protocol": "HTTPS",
+                  "InstanceProtocol": "HTTP"
+                }
+              ],
+              "Scheme" : "internal",
+              "SecurityGroups" : [ {"Ref": "WebAppsg"}],
+              "Subnets" : [
+                { "Ref": "PrivateSubnet2A" }, { "Ref": "PrivateSubnet2C"}
+              ],
+              "HealthCheck": {
+                  "Target": "TCP:8084",
+                  "HealthyThreshold": "3",
+                  "UnhealthyThreshold": "5",
+                  "Interval": 90,
+                  "Timeout": "10"
+              },
+              "Instances": [
+                {"Ref": "AppServerA"},
+                {"Ref": "AppServerC"}
+              ],
+              "Tags": [
+                {"Key": "Environment", "Value": {"Ref": "EnvName"}},
+                {"Key": "Role", "Value": "Applicationservers"},
+                {"Key": "Name", "Value":  { "Fn::Join": ["",[{"Ref": "EnvName"},"-","cap"]]}}
+              ]
+            }
+          },
+        "nuxeoELB": {
+          "Type": "AWS::ElasticLoadBalancing::LoadBalancer",
+          "Metadata":{ "Comment": "Nuxeo loadbalancer - region us-west-1 " },
+          "Properties": {
+            "LoadBalancerName": { "Fn::Join": ["",[{"Ref": "EnvName"},"-","nuxeo"]]},
+            "Listeners" : [
+              {
+                "LoadBalancerPort": "443",
+                "InstancePort": "9080",
+                "SSLCertificateId": {"Ref": "SSLCertificateId"},
+                "Protocol": "HTTPS",
+                "InstanceProtocol": "HTTP"
+              }
+            ],
+            "Scheme" : "internal",
+            "SecurityGroups" : [ {"Ref": "WebAppsg"},{"Ref": "WebApisg2"}],
+            "Subnets" : [
+              { "Ref": "PrivateSubnet2A" }, { "Ref": "PrivateSubnet2C"}
+            ],
+            "HealthCheck": {
+                "Target": "TCP:9080",
+                "HealthyThreshold": "3",
+                "UnhealthyThreshold": "5",
+                "Interval": 90,
+                "Timeout": "10"
+            },
+            "Instances": [
+              {"Ref": "AppServerA"},
+              {"Ref": "AppServerC"}
+            ],
+            "Tags": [
+              {"Key": "Environment", "Value": {"Ref": "EnvName"}},
+              {"Key": "Role", "Value": "Applicationservers"},
+              {"Key": "Name", "Value":  { "Fn::Join": ["",[{"Ref": "EnvName"},"-","nuxeo"]]}}
+            ]
+          }
+        },
+        "dmsELB": {
+          "Type": "AWS::ElasticLoadBalancing::LoadBalancer",
+          "Metadata":{ "Comment": "DMS loadbalancer - region us-west-1 " },
+          "Properties": {
+            "LoadBalancerName": { "Fn::Join": ["",[{"Ref": "EnvName"},"-","DMS"]]},
+            "Listeners" : [
+              {
+                "LoadBalancerPort": "443",
+                "InstancePort": "8086",
+                "SSLCertificateId": {"Ref": "SSLCertificateId"},
+                "Protocol": "HTTPS",
+                "InstanceProtocol": "HTTP"
+              }
+            ],
+            "Scheme" : "internal",
+            "SecurityGroups" : [ {"Ref": "WebApisg"},{"Ref": "WebApisg2"}],
+            "Subnets" : [
+              { "Ref": "PrivateSubnet2A" }, { "Ref": "PrivateSubnet2C"}
+            ],
+            "HealthCheck": {
+              "Target": "TCP:8086",
+              "HealthyThreshold": "3",
+              "UnhealthyThreshold": "5",
+              "Interval": 40,
+              "Timeout": "10"
+            },
+            "Instances": [
+              {"Ref": "ApiServerA"},
+              {"Ref": "ApiServerC"}
+            ],
+            "Tags": [
+              {"Key": "Environment", "Value": {"Ref": "EnvName"}},
+              {"Key": "Role", "Value": "Applicationservers"},
+              {"Key": "Name", "Value":  { "Fn::Join": ["",[{"Ref": "EnvName"},"-","DMS"]]}}
+            ]
+          }
+        },
+        "formsapiELB": {
+          "Type": "AWS::ElasticLoadBalancing::LoadBalancer",
+          "Condition": "formsapideploy",
+          "Metadata":{ "Comment": "Forms API loadbalancer - region us-west-1 " },
+          "Properties": {
+            "LoadBalancerName": { "Fn::Join": ["",[{"Ref": "EnvName"},"-","formsapi"]]},
+            "Listeners" : [
+              {
+                "LoadBalancerPort": "443",
+                "InstancePort": "8087",
+                "SSLCertificateId": {"Ref": "SSLCertificateId"},
+                "Protocol": "HTTPS",
+                "InstanceProtocol": "HTTP"
+              }
+            ],
+            "Scheme" : "internal",
+            "SecurityGroups" : [ {"Ref": "WebAppsg"},{"Ref": "WebApisg2"}],
+            "Subnets" : [
+              { "Ref": "PrivateSubnet2A" }, { "Ref": "PrivateSubnet2C"}
+            ],
+            "HealthCheck": {
+              "Target": "TCP:8087",
+              "HealthyThreshold": "3",
+              "UnhealthyThreshold": "5",
+              "Interval": 40,
+              "Timeout": "10"
+            },
+            "Instances": [
+              {"Ref": "ApiServerA"},
+              {"Ref": "ApiServerC"}
+            ],
+            "Tags": [
+              {"Key": "Environment", "Value": {"Ref": "EnvName"}},
+              {"Key": "Role", "Value": "Applicationservers"},
+              {"Key": "Name", "Value":  { "Fn::Join": ["",[{"Ref": "EnvName"},"-","Forms-API"]]}}
+            ]
+          }
+        },
+        "PerryServerA": {
+            "Type": "AWS::EC2::Instance",
+            "Metadata":{ "Comment": "Perry Server on AvailabilityZone west-1a" },
+            "Properties":{
+                "ImageId": { "Ref": "ImageID" }
+                ,
+                "BlockDeviceMappings": [
+                    {
+                        "DeviceName": "/dev/xvda",
+                        "Ebs": {
+                            "DeleteOnTermination": "true",
+                            "VolumeSize": "100"
+                        }
+                    }
+                ],
+                "InstanceType": {"Ref": "InstanceType"},
+                "SubnetId": { "Ref": "PrivateSubnet2A" },
+                "IamInstanceProfile": "Cloudwatch",
+                "Monitoring": "true",
+                "KeyName": {"Ref":"KeyName"},
+                "InstanceInitiatedShutdownBehavior": "stop",
+                "DisableApiTermination": {"Ref": "DisableApiTermination"},
+                "SecurityGroupIds": [{ "Ref" : "Perrysg"},{ "Ref" : "proxydb2sg"},{"Ref": "ManagedServerRules"}],
+                "Tags": [
+                  {"Key": "Environment", "Value": {"Ref": "EnvName"}},
+                  {"Key": "Role", "Value": "Applicationservers"},
+                  {"Key": "Name", "Value":  { "Fn::Join": ["",[{"Ref": "EnvName"},"-","perry-a"]]}},
+                  {"Key": "Patch Group", "Value": {"Ref": "PatchGroups1"}}
+              ]
+            }
+        },
+
+        "PerryServer2A": {
+            "Type": "AWS::EC2::Instance",
+            "Metadata":{ "Comment": "Perry Server 2 on AvailabilityZone west-1a" },
+            "Condition": "perry3node",
+            "Properties":{
+                "ImageId": { "Ref": "ImageID" }
+                ,
+                "BlockDeviceMappings": [
+                    {
+                        "DeviceName": "/dev/xvda",
+                        "Ebs": {
+                            "DeleteOnTermination": "true",
+                            "VolumeSize": "100"
+                        }
+                    }
+                ],
+                "InstanceType": {"Ref": "InstanceType"},
+                "SubnetId": { "Ref": "PrivateSubnet2A" },
+                "IamInstanceProfile": "Cloudwatch",
+                "Monitoring": "true",
+                "KeyName": {"Ref":"KeyName"},
+                "InstanceInitiatedShutdownBehavior": "stop",
+                "DisableApiTermination": {"Ref": "DisableApiTermination"},
+                "SecurityGroupIds": [{ "Ref" : "Perrysg"},{ "Ref" : "proxydb2sg"},{"Ref": "ManagedServerRules"}],
+                "Tags": [
+                  {"Key": "Environment", "Value": {"Ref": "EnvName"}},
+                  {"Key": "Role", "Value": "Applicationservers"},
+                  {"Key": "Name", "Value":  { "Fn::Join": ["",[{"Ref": "EnvName"},"-","perry-2a"]]}},
+                  {"Key": "Patch Group", "Value": {"Ref": "PatchGroups3"}}
+              ]
+            }
+        },
+
+        "PerryServerC": {
+            "Type": "AWS::EC2::Instance",
+            "Metadata":{ "Comment": "Perry Server on AvailabilityZone west-1c" },
+            "Properties":{
+                "ImageId": { "Ref": "ImageID" },
+                "BlockDeviceMappings": [
+                    {
+                        "DeviceName": "/dev/xvda",
+                        "Ebs": {
+                            "DeleteOnTermination": "true",
+                            "VolumeSize": "100"
+                        }
+                    }
+                ],
+                "InstanceType": {"Ref": "InstanceType"},
+                "SubnetId": { "Ref": "PrivateSubnet2C" },
+                "IamInstanceProfile": "Cloudwatch",
+                "Monitoring": "true",
+                "KeyName": {"Ref":"KeyName"},
+                "InstanceInitiatedShutdownBehavior": "stop",
+                "DisableApiTermination": {"Ref": "DisableApiTermination"},
+                "SecurityGroupIds": [{ "Ref" : "Perrysg"},{ "Ref" : "proxydb2sg"},{"Ref": "ManagedServerRules"}],
+                "Tags": [
+                  {"Key": "Environment", "Value": {"Ref": "EnvName"}},
+                  {"Key": "Role", "Value": "Applicationservers"},
+                  {"Key": "Name", "Value":  { "Fn::Join": ["",[{"Ref": "EnvName"},"-","perry-c"]]}},
+                  {"Key": "Patch Group", "Value": {"Ref": "PatchGroups2"}}
+              ]
+            }
+        },
+        "ElbExternalPerry": {
+           "Type": "AWS::ElasticLoadBalancing::LoadBalancer",
+           "Condition": "perry2node",
+           "Metadata":{ "Comment": "Perry loadbalancer public - region # us-west-1" },
+           "Properties": {
+              "LoadBalancerName": { "Fn::Join": ["",[{"Ref": "EnvName"},"-","perry"]]},
+              "Listeners" : [
+                  {
+                      "LoadBalancerPort": "443",
+                      "InstancePort": "8080",
+                      "SSLCertificateId": {"Ref": "SSLCertificateId"},
+                      "Protocol": "HTTPS",
+                      "InstanceProtocol": "HTTP"
+                  }
+              ],
+              "SecurityGroups" : [ {"Ref": "WebPerryExternalsg"}],
+              "Subnets" : [ {"Ref": "PublicSubnet2A"}, { "Ref": "PublicSubnet2C"} ],
+              "HealthCheck": {
+                  "Target": "TCP:8080",
+                  "HealthyThreshold": "3",
+                  "UnhealthyThreshold": "5",
+                  "Interval": 90,
+                  "Timeout": "10"
+              },
+              "Instances": [
+                  {"Ref": "PerryServerA"},
+                  {"Ref": "PerryServerC"}
+              ],
+              "Tags": [
+                  {"Key": "Environment", "Value": {"Ref": "EnvName"}},
+                  {"Key": "Role", "Value": "Applicationservers"},
+                  {"Key": "Name", "Value":  { "Fn::Join": ["",[{"Ref": "EnvName"},"-","Perry-elb"]]}}
+              ]
+           }
+        },
+        "ElbExternalPerry3node": {
+            "Type": "AWS::ElasticLoadBalancing::LoadBalancer",
+            "Condition": "perry3node",
+            "Metadata":{ "Comment": "Perry loadbalancer public - region # us-west-1" },
+            "Properties": {
+               "LoadBalancerName": { "Fn::Join": ["",[{"Ref": "EnvName"},"-","perry3node"]]},
+               "Listeners" : [
+                   {
+                       "LoadBalancerPort": "443",
+                       "InstancePort": "8080",
+                       "SSLCertificateId": {"Ref": "SSLCertificateId"},
+                       "Protocol": "HTTPS",
+                       "InstanceProtocol": "HTTP"
+                   }
+               ],
+               "SecurityGroups" : [ {"Ref": "WebPerryExternalsg"}],
+               "Subnets" : [ {"Ref": "PublicSubnet2A"}, { "Ref": "PublicSubnet2C"} ],
+               "HealthCheck": {
+                   "Target": "TCP:8080",
+                   "HealthyThreshold": "3",
+                   "UnhealthyThreshold": "5",
+                   "Interval": 90,
+                   "Timeout": "10"
+               },
+               "CrossZone" : "true",
+               "Instances": [
+                   {"Ref": "PerryServerA"},
+                   {"Ref": "PerryServer2A"},
+                   {"Ref": "PerryServerC"}
+               ],
+               "Tags": [
+                   {"Key": "Environment", "Value": {"Ref": "EnvName"}},
+                   {"Key": "Role", "Value": "Applicationservers"},
+                   {"Key": "Name", "Value":  { "Fn::Join": ["",[{"Ref": "EnvName"},"-","Perry-elb"]]}}
+               ]
+            }
+         },
+      "ElbIDP": {
+        "Type": "AWS::ElasticLoadBalancing::LoadBalancer",
+        "Condition": "idpdeploy",
+        "Metadata":{ "Comment": "IDP loadbalancer - region # us-west-1" },
+        "Properties": {
+          "LoadBalancerName": { "Fn::Join": ["",[{"Ref": "EnvName"},"-","IDP"]]},
+          "Listeners" : [
+            {
+              "LoadBalancerPort": "443",
+              "InstancePort": "9081",
+              "SSLCertificateId": {"Ref": "SSLCertificateId"},
+              "Protocol": "HTTPS",
+              "InstanceProtocol": "HTTP"
+            }
+          ],
+          "Scheme" : "internal",
+          "SecurityGroups" : [ {"Ref": "IDPsg"},{"Ref": "WebApisg2"}],
+          "Subnets" : [ {"Ref": "PrivateSubnet2A"}, { "Ref": "PrivateSubnet2C"} ],
+          "HealthCheck": {
+            "Target": "TCP:9081",
+            "HealthyThreshold": "3",
+            "UnhealthyThreshold": "5",
+            "Interval": 90,
+            "Timeout": "10"
+          },
+          "Instances": [
+            {"Ref": "PerryServerA"},
+            {"Ref": "PerryServerC"}
+          ],
+          "Tags": [
+            {"Key": "Environment", "Value": {"Ref": "EnvName"}},
+            {"Key": "Role", "Value": "Applicationservers"},
+            {"Key": "Name", "Value":  { "Fn::Join": ["",[{"Ref": "EnvName"},"-","IDP-elb"]]}}
+          ]
+        }
+      },
+
+        "ApiServerA": {
+            "Type": "AWS::EC2::Instance",
+            "Metadata":{ "Comment": "API Server (Cals/Intake) on AvailabilityZone west-1a" },
+            "Properties":{
+                "ImageId": { "Ref": "ImageID" },
+                "BlockDeviceMappings": [
+                    {
+                        "DeviceName": "/dev/xvda",
+                        "Ebs": {
+                            "DeleteOnTermination": "true",
+                            "VolumeSize": "100"
+                        }
+                    }
+                ],
+                "InstanceType": {"Ref": "InstanceType"},
+                "SubnetId": { "Ref": "PrivateSubnet2A" },
+                "IamInstanceProfile": "Cloudwatch",
+                "Monitoring": "true",
+                "KeyName": {"Ref":"KeyName"},
+                "InstanceInitiatedShutdownBehavior": "stop",
+                "DisableApiTermination": {"Ref": "DisableApiTermination"},
+                "SecurityGroupIds": [{ "Ref" : "Apisg"},{ "Ref" : "proxydb2sg"},{"Ref": "ManagedServerRules"}],
+               "Tags": [
+                  {"Key": "Environment", "Value": {"Ref": "EnvName"}},
+                  {"Key": "Role", "Value": "Applicationservers"},
+                  {"Key": "Name", "Value":  { "Fn::Join": ["",[{"Ref": "EnvName"},"-","api-a"]]}},
+                  {"Key": "Patch Group", "Value": {"Ref": "PatchGroups1"}}
+              ]
+            }
+        },
+        "ApiServerC": {
+            "Type": "AWS::EC2::Instance",
+            "Metadata":{ "Comment": "API Server (Cals/Intake) on AvailabilityZone west-1c" },
+            "Properties":{
+                "ImageId": { "Ref": "ImageID" },
+                "BlockDeviceMappings": [
+                    {
+                        "DeviceName": "/dev/xvda",
+                        "Ebs": {
+                            "DeleteOnTermination": "true",
+                            "VolumeSize": "100"
+                        }
+                    }
+                ],
+                "InstanceType": {"Ref": "InstanceType"},
+                "SubnetId": { "Ref": "PrivateSubnet2C" },
+                "IamInstanceProfile": "Cloudwatch",
+                "Monitoring": "true",
+                "KeyName": {"Ref":"KeyName"},
+                "InstanceInitiatedShutdownBehavior": "stop",
+                "DisableApiTermination": {"Ref": "DisableApiTermination"},
+                "SecurityGroupIds": [{ "Ref" : "Apisg"},{ "Ref" : "proxydb2sg"},{"Ref": "ManagedServerRules"}],
+               "Tags": [
+                  {"Key": "Environment", "Value": {"Ref": "EnvName"}},
+                  {"Key": "Role", "Value": "Applicationservers"},
+                  {"Key": "Name", "Value":  { "Fn::Join": ["",[{"Ref": "EnvName"},"-","api-c"]]}},
+                  {"Key": "Patch Group", "Value": {"Ref": "PatchGroups2"}}
+              ]
+            }
+        },
+        "ElbFerbApi": {
+           "Type": "AWS::ElasticLoadBalancing::LoadBalancer",
+           "Metadata":{ "Comment": "Tpt API loadbalancer - region # us-west-1" },
+           "Properties": {
+              "LoadBalancerName": { "Fn::Join": ["",[{"Ref": "EnvName"},"-","ferb-api"]]},               
+              "Listeners" : [
+                  {
+                      "LoadBalancerPort": "443",
+                      "SSLCertificateId": {"Ref": "SSLCertificateId"},
+                      "InstancePort": "80",
+                      "Protocol": "HTTPS",
+                      "InstanceProtocol": "HTTP"
+                  }
+              ],
+              "Scheme" : "internal",
+              "SecurityGroups" : [ {"Ref": "WebApisg"},{"Ref": "WebApisg2"}],
+              "Subnets" : [
+                { "Ref": "PrivateSubnet2A" }, { "Ref": "PrivateSubnet2C"}
+              ],
+              "HealthCheck": {
+                "Target": "TCP:80",
+                "HealthyThreshold": "3",
+                "UnhealthyThreshold": "5",
+                "Interval": 90,
+                "Timeout": "10"
+              },
+              "Instances": [
+                  {"Ref": "ApiServerA"},
+                  {"Ref": "ApiServerC"}
+              ],
+             "Tags": [
+                  {"Key": "Environment", "Value": {"Ref": "EnvName"}},
+                  {"Key": "Role", "Value": "Applicationservers"},
+                  {"Key": "Name", "Value":  { "Fn::Join": ["",[{"Ref": "EnvName"},"-","ferb-api"]]}}
+              ]
+           }
+        },
+        "ElbDoraApi": {
+           "Type": "AWS::ElasticLoadBalancing::LoadBalancer",
+           "Metadata":{ "Comment": "Dora API loadbalancer - region # us-west-1" },
+           "Properties": {
+              "LoadBalancerName": { "Fn::Join": ["",[{"Ref": "EnvName"},"-","dora-api"]]},               
+              "Listeners" : [
+                  {
+                      "LoadBalancerPort": "443",
+                      "SSLCertificateId": {"Ref": "SSLCertificateId"},
+                      "InstancePort": "8083",
+                      "Protocol": "HTTPS",
+                      "InstanceProtocol": "HTTP"
+                  }
+              ],
+              "Scheme" : "internal",
+              "SecurityGroups" : [{"Ref": "WebApisg"},{"Ref": "WebApisg2"}],
+              "Subnets" : [
+                { "Ref": "PrivateSubnet2A" }, { "Ref": "PrivateSubnet2C"}
+              ],
+              "HealthCheck": {
+                  "Target": "TCP:8083",
+                  "HealthyThreshold": "3",
+                  "UnhealthyThreshold": "5",
+                  "Interval": 90,
+                  "Timeout": "10"
+              },
+              "Instances": [
+                  {"Ref": "ApiServerA"},
+                  {"Ref": "ApiServerC"}
+              ],
+             "Tags": [
+                  {"Key": "Environment", "Value": {"Ref": "EnvName"}},
+                  {"Key": "Application", "Value": {"Ref": "AWS::StackName"}},
+                  {"Key": "Name", "Value":  { "Fn::Join": ["",[{"Ref": "EnvName"},"-","dora-api"]]}}
+              ]
+           }
+        },
+        "ElbCalsApi": {
+           "Type": "AWS::ElasticLoadBalancing::LoadBalancer",
+           "Metadata":{ "Comment": "Cals API Server Loadbalancer - region # us-west-1" },
+           "Properties": {
+              "LoadBalancerName": { "Fn::Join": ["",[{"Ref": "EnvName"},"-","cals-api"]]},               
+              "Listeners" : [
+                  {
+                      "LoadBalancerPort": "443",
+                      "InstancePort": "8084",
+                      "SSLCertificateId": {"Ref": "SSLCertificateId"},
+                      "Protocol": "HTTPS",
+                      "InstanceProtocol": "HTTP"
+                  }
+              ],
+              "Scheme" : "internal",
+              "SecurityGroups" : [ {"Ref": "WebApisg"},{"Ref": "WebApisg2"}],
+              "Subnets" : [{ "Ref": "PrivateSubnet2A" }, { "Ref": "PrivateSubnet2C"}],
+              "HealthCheck": {
+                  "Target": "TCP:8084",
+                  "HealthyThreshold": "3",
+                  "UnhealthyThreshold": "5",
+                  "Interval": 90,
+                  "Timeout": "10"
+              },
+              "Instances": [
+                  {"Ref": "ApiServerA"},
+                  {"Ref": "ApiServerC"}
+              ],
+             "Tags": [
+                  {"Key": "Environment", "Value": {"Ref": "EnvName"}},
+                  {"Key": "Role", "Value": "Applicationservers"},
+                  {"Key": "Name", "Value":  { "Fn::Join": ["",[{"Ref": "EnvName"},"-","cals-api"]]}}
+              ]
+           }
+        },
+        "ElbGeoApi": {
+           "Type": "AWS::ElasticLoadBalancing::LoadBalancer",
+           "Metadata":{ "Comment": "Geo API Server Loadbalancer - region # us-west-1" },
+           "Properties": {
+              "LoadBalancerName": { "Fn::Join": ["",[{"Ref": "EnvName"},"-","geo-api"]]},               
+              "Listeners" : [
+                  {
+                      "LoadBalancerPort": "443",
+                      "InstancePort": "8085",
+                      "SSLCertificateId": {"Ref": "SSLCertificateId"},
+                      "Protocol": "HTTPS",
+                      "InstanceProtocol": "HTTP"
+                  }
+              ],
+              "Scheme" : "internal",
+              "SecurityGroups" : [ {"Ref": "WebApisg"},{"Ref": "WebApisg2"}],
+              "Subnets" : [{ "Ref": "PrivateSubnet2A" }, { "Ref": "PrivateSubnet2C"}],
+              "HealthCheck": {
+                  "Target": "TCP:8085",
+                  "HealthyThreshold": "3",
+                  "UnhealthyThreshold": "5",
+                  "Interval": 90,
+                  "Timeout": "10"
+              },
+              "Instances": [
+                  {"Ref": "ApiServerA"},
+                  {"Ref": "ApiServerC"}
+              ],
+             "Tags": [
+                  {"Key": "Environment", "Value": {"Ref": "EnvName"}},
+                  {"Key": "Role", "Value": "Applicationservers"},
+                  {"Key": "Name", "Value":  { "Fn::Join": ["",[{"Ref": "EnvName"},"-","geo-api"]]}}
+              ]
+           }
+        },
+        "ElbCansApi": {
+            "Type": "AWS::ElasticLoadBalancing::LoadBalancer",
+            "Metadata":{ "Comment": "Cans API Server Loadbalancer - region # us-west-1" },
+            "Condition": "cansdeploy",
+            "Properties": {
+               "LoadBalancerName": { "Fn::Join": ["",[{"Ref": "EnvName"},"-","cans-api"]]},               
+               "Listeners" : [
+                   {
+                       "LoadBalancerPort": "443",
+                       "InstancePort": "8088",
+                       "SSLCertificateId": {"Ref": "SSLCertificateId"},
+                       "Protocol": "HTTPS",
+                       "InstanceProtocol": "HTTP"
+                   }
+               ],
+               "Scheme" : "internal",
+               "SecurityGroups" : [ {"Ref": "WebApisg"},{"Ref": "WebApisg2"}],
+               "Subnets" : [{ "Ref": "PrivateSubnet2A" }, { "Ref": "PrivateSubnet2C"}],
+               "HealthCheck": {
+                   "Target": "TCP:8088",
+                   "HealthyThreshold": "3",
+                   "UnhealthyThreshold": "5",
+                   "Interval": 90,
+                   "Timeout": "10"
+               },
+               "Instances": [
+                   {"Ref": "ApiServerA"},
+                   {"Ref": "ApiServerC"}
+               ],
+              "Tags": [
+                   {"Key": "Environment", "Value": {"Ref": "EnvName"}},
+                   {"Key": "Role", "Value": "Applicationservers"},
+                   {"Key": "Name", "Value":  { "Fn::Join": ["",[{"Ref": "EnvName"},"-","cans-api"]]}}
+               ]
+            }
+         },
+        "ElbCmapi": {
+            "Type": "AWS::ElasticLoadBalancing::LoadBalancer",
+            "Condition": "cmapideploy",
+            "Metadata":{ "Comment": "Case-mng Api servers loadbalancer - region us-west-1 " },
+            "Properties": {
+            "LoadBalancerName": { "Fn::Join": ["",[{"Ref": "EnvName"},"-","cmapi"]]},
+            "Listeners" : [
+                {
+                "LoadBalancerPort": "443",
+                "InstancePort": "8089",
+                "SSLCertificateId": {"Ref": "SSLCertificateId"},
+                "Protocol": "HTTPS",
+                "InstanceProtocol": "HTTP"
+                }
+            ],
+            "Scheme" : "internal",
+            "SecurityGroups" : [ {"Ref": "WebApisg"}, {"Ref": "WebApisg2"}],
+            "Subnets" : [
+                { "Ref": "PrivateSubnet2A" }, { "Ref": "PrivateSubnet2C"}
+            ],
+            "HealthCheck": {
+                "Target": "TCP:8089",
+                "HealthyThreshold": "3",
+                "UnhealthyThreshold": "5",
+                "Interval": 90,
+                "Timeout": "10"
+            },
+            "Instances": [
+                {"Ref": "ApiServerA"},
+                {"Ref": "ApiServerC"}
+            ],
+            "Tags": [
+                {"Key": "Environment", "Value": {"Ref": "EnvName"}},
+                {"Key": "Role", "Value": "Applicationservers"},
+                {"Key": "Name", "Value":  { "Fn::Join": ["",[{"Ref": "EnvName"},"-","cmapi"]]}}
+            ]
+            }
+         }
+    },
+    
+    "Outputs": {
+        "InternalWebGatewayA": {
+            "Description": "Webgateway Server Private IP",
+            "Value": { "Fn::GetAtt": ["WebGatewayA","PrivateIp"]},
+            "Export": { "Name": { "Fn::Join": ["",[{"Ref": "EnvName"},"-","InternalWebgatewayA"]]}}
+        },
+        "InternalWebGatewayC": {
+            "Description": "Webgateway Server Private IP",
+            "Value": { "Fn::GetAtt": ["WebGatewayC","PrivateIp"]},
+            "Export": { "Name": { "Fn::Join": ["",[{"Ref": "EnvName"},"-","InternalWebgatewayC"]]}}
+        },
+        "InternalWebGatewayAInstanceId": {
+            "Description": "Webgateway Server Private IP",
+            "Value": {"Ref": "WebGatewayA"},
+            "Export": { "Name": { "Fn::Join": ["",[{"Ref": "EnvName"},"-","InternalWebgatewayA-InstanceId"]]}}
+        },
+        "InternalWebGatewayCInstanceId": {
+            "Description": "Webgateway Server Private IP",
+            "Value": {"Ref": "WebGatewayC"},
+            "Export": { "Name": { "Fn::Join": ["",[{"Ref": "EnvName"},"-","InternalWebgatewayC-InstanceId"]]}}
+        },
+        "AppServerA": {
+            "Description": "Intake Server Private IP",
+            "Value": {"Fn::GetAtt": ["AppServerA","PrivateIp"]},
+            "Export": { "Name": { "Fn::Join": ["",[{"Ref": "EnvName"},"-","AppServerA"]]}}
+        },
+        "AppServerC": {
+            "Description": "Intake Server Private IP",
+            "Value": {"Fn::GetAtt": ["AppServerC","PrivateIp"]},
+            "Export": { "Name": { "Fn::Join": ["",[{"Ref": "EnvName"},"-","AppServerC"]]}}            
+        },
+        "AppServerAInstanceId": {
+            "Description": "Intake Server Instance Id",
+            "Value": {"Ref": "AppServerA"},
+            "Export": { "Name": { "Fn::Join": ["",[{"Ref": "EnvName"},"-","AppServerA-InstanceId"]]}}
+        },
+        "AppServerCInstanceId": {
+            "Description": "Intake Server Instance Id",
+            "Value": {"Ref": "AppServerC"},
+            "Export": { "Name": { "Fn::Join": ["",[{"Ref": "EnvName"},"-","AppServerC-InstanceId"]]}}            
+        },
+        "PerryServerA": {
+            "Description": "Perry Server Private IP",
+            "Value": {"Fn::GetAtt": ["PerryServerA","PrivateIp"]},
+            "Export": { "Name": { "Fn::Join": ["",[{"Ref": "EnvName"},"-","PerryServerA"]]}} 
+        },
+        "PerryServer2A": {
+            "Description": "Perry Server Private IP",
+            "Value": {"Fn::If": ["perry3node",{"Fn::GetAtt": ["PerryServer2A","PrivateIp"]},"NoValue"]},
+            "Export": { "Name": { "Fn::Join": ["",[{"Ref": "EnvName"},"-","PerryServer2A"]]}} 
+        },
+        "PerryServerC": {
+            "Description": "Perry Server Private IP",
+            "Value": {"Fn::GetAtt": ["PerryServerC","PrivateIp"]},
+            "Export": { "Name": { "Fn::Join": ["",[{"Ref": "EnvName"},"-","PerryServerC"]]}} 
+        },
+        "PerryServerAInstanceId": {
+            "Description": "Perry Server Instance Id",
+            "Value": {"Ref": "PerryServerA"},
+            "Export": { "Name": { "Fn::Join": ["",[{"Ref": "EnvName"},"-","PerryServerA-InstanceId"]]}} 
+        },
+        "PerryServer2AInstanceId": {
+            "Description": "Perry Server Instance Id",
+            "Value": {"Fn::If": ["perry3node",{"Ref": "PerryServer2A"},"NoValue"]},
+            "Export": { "Name": { "Fn::Join": ["",[{"Ref": "EnvName"},"-","PerryServer2A-InstanceId"]]}} 
+        },
+        "PerryServerCInstanceId": {
+            "Description": "Perry Server Instance Id",
+            "Value": {"Ref": "PerryServerC"},
+            "Export": { "Name": { "Fn::Join": ["",[{"Ref": "EnvName"},"-","PerryServerC-InstanceId"]]}} 
+        },
+        "ApiServerA": {
+            "Description": "API Server Private IP",
+            "Value": {"Fn::GetAtt": ["ApiServerA","PrivateIp"]},
+            "Export": { "Name": { "Fn::Join": ["",[{"Ref": "EnvName"},"-","ApiServerA"]]}} 
+        },
+        "ApiServerC": {
+            "Description": "API Server Private IP",
+            "Value": {"Fn::GetAtt": ["ApiServerC","PrivateIp"]},
+            "Export": { "Name": { "Fn::Join": ["",[{"Ref": "EnvName"},"-","ApiServerC"]]}}
+        },
+        "ApiServerAInstanceId": {
+            "Description": "Intake Ruby API Server Instance Id",
+            "Value": {"Ref": "ApiServerA"},
+            "Export": { "Name": { "Fn::Join": ["",[{"Ref": "EnvName"},"-","ApiServerA-InstanceId"]]}}
+        },
+        "ApiServerCInstanceId": {
+            "Description": "Intake Ruby API Server Instance Id",
+            "Value": {"Ref": "ApiServerC"},
+            "Export": { "Name": { "Fn::Join": ["",[{"Ref": "EnvName"},"-","ApiServerC-InstanceId"]]}}            
+        },
+        "ELBWebgateway": {
+            "Description": "Elb Web Gateway DNS name ",
+            "Value": { "Fn::GetAtt": ["ELBWebgateway","DNSName"]},
+            "Export": { "Name": { "Fn::Join": ["",[{"Ref": "EnvName"},"-","InternalELBWebgateway"]]}}
+        },
+        "ElbIntake": {
+            "Description": "Elb Intake DNS name ",
+            "Value": {"Fn::GetAtt": ["ElbIntake","DNSName"]},
+            "Export": { "Name": { "Fn::Join": ["",[{"Ref": "EnvName"},"-", "ElbIntake"]]}}
+        },
+        "ElbCals": {
+            "Description": "Elb Intake DNS name ",
+            "Value": {"Fn::GetAtt": ["ElbCals","DNSName"]},
+            "Export": { "Name": { "Fn::Join": ["",[{"Ref": "EnvName"},"-", "ElbCals"]]}}
+        },
+        "ElbCase": {
+          "Description": "Elb Case management DNS name ",
+          "Value": {"Fn::If": ["cmapideploy",{"Fn::GetAtt": ["ElbCase","DNSName"]},"NoValue"]},
+          "Export": { "Name": { "Fn::Join": ["",[{"Ref": "EnvName"},"-", "ElbCase"]]}}
+        },
+        "ElbCans": {
+            "Description": "Elb Case management DNS name ",
+            "Value": {"Fn::If": ["cansdeploy",{"Fn::GetAtt": ["ElbCans","DNSName"]},"NoValue"]},
+            "Export": { "Name": { "Fn::Join": ["",[{"Ref": "EnvName"},"-", "ElbCans"]]}}
+          },
+        "ElbCmapi": {
+          "Description": "Elb Case management api DNS name ",
+          "Value": {"Fn::If": ["cmapideploy",{"Fn::GetAtt": ["ElbCmapi","DNSName"]},"NoValue"]},
+          "Export": { "Name": { "Fn::Join": ["",[{"Ref": "EnvName"},"-", "ElbCmapi"]]}}
+        },
+        "ElbDashboard": {
+            "Description": "Elb Dashboard DNS name ",
+            "Value": {"Fn::GetAtt": ["ElbDashboard","DNSName"]},
+            "Export": { "Name": { "Fn::Join": ["",[{"Ref": "EnvName"},"-", "ElbDashboard"]]}}
+        },
+        "ElbCap": {
+            "Description": "Elb Cpunty admin page DNS name ",
+            "Value": {"Fn::GetAtt": ["ElbCap","DNSName"]},
+            "Export": { "Name": { "Fn::Join": ["",[{"Ref": "EnvName"},"-", "ElbCap"]]}}
+        },
+        "nuxeoELB": {
+          "Description": "Elb nuxeo DNS name ",
+          "Value": {"Fn::GetAtt": ["nuxeoELB","DNSName"]},
+          "Export": { "Name": { "Fn::Join": ["",[{"Ref": "EnvName"},"-", "nuxeoELB"]]}}
+        },
+        "dmsELB": {
+          "Description": "Elb dms DNS name ",
+          "Value": {"Fn::GetAtt": ["dmsELB","DNSName"]},
+          "Export": { "Name": { "Fn::Join": ["",[{"Ref": "EnvName"},"-", "dmsELB"]]}}
+        },
+        "formsapiELB": {
+          "Description": "Elb forms api DNS name ",
+          "Value": {"Fn::If": ["formsapideploy",{"Fn::GetAtt": ["formsapiELB","DNSName"]},"NoValue"]},
+          "Export": { "Name": { "Fn::Join": ["",[{"Ref": "EnvName"},"-", "formsapiELB"]]}}
+        },
+        "ElbExternalPerry": {
+            "Description": "Elb Perry DNS name",
+            "Value": {"Fn::If": ["perry3node",{"Fn::GetAtt": ["ElbExternalPerry3node","DNSName"]},{"Fn::GetAtt": ["ElbExternalPerry","DNSName"]}]},
+            "Export": { "Name": { "Fn::Join": ["",[{"Ref": "EnvName"},"-","ElbExternalPerry"]]}}
+        },
+        "ElbIDP": {
+          "Description": "Elb IDP DNS name",
+          "Value": {"Fn::If": ["idpdeploy",{"Fn::GetAtt": ["ElbIDP","DNSName"]},"NoValue"]},
+          "Export": { "Name": { "Fn::Join": ["",[{"Ref": "EnvName"},"-","ElbIDP"]]}}
+        },
+        "ElbCalsApi": {
+            "Description": "Elb Cals-Api DNS name ",
+            "Value": {"Fn::GetAtt": ["ElbCalsApi","DNSName"]},
+            "Export": { "Name": { "Fn::Join": ["",[{"Ref": "EnvName"},"-","ElbCalsApi"]]}}
+        },
+        "ElbGeoApi": {
+            "Description": "Elb Geo-Api DNS name ",
+            "Value": {"Fn::GetAtt": ["ElbGeoApi","DNSName"]},
+            "Export": { "Name": { "Fn::Join": ["",[{"Ref": "EnvName"},"-","ElbGeoApi"]]}}
+        },
+        "ElbCansApi": {
+            "Description": "Elb cans-Api DNS name ",
+            "Value": {"Fn::If": ["cansdeploy",{"Fn::GetAtt": ["ElbCansApi","DNSName"]},"NoValue"]},
+            "Export": { "Name": { "Fn::Join": ["",[{"Ref": "EnvName"},"-","ElbCansApi"]]}}
+        },
+        "ElbFerbApi": {
+            "Description": "ElasticLoadBalancer TPT-Api DNS name",
+            "Value": {"Fn::GetAtt": ["ElbFerbApi","DNSName"]},
+            "Export": { "Name": { "Fn::Join": ["",[{"Ref": "EnvName"},"-","ElbFerbApi"]]}}
+        },
+        "ElbDoraApi": {
+            "Description": "ElasticLoadBalancer Dora-Api DNS name",
+            "Value": {"Fn::GetAtt": ["ElbDoraApi","DNSName"]},
+            "Export": { "Name": { "Fn::Join": ["",[{"Ref": "EnvName"},"-","ElbDoraApi"]]}}
+        }
+    }
+}

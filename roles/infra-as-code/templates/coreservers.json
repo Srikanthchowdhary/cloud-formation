@@ -1,0 +1,220 @@
+{
+    "AWSTemplateFormatVersion": "2010-09-09",
+    "Description": "App and core servers ec2 servers",
+    "Metadata": {
+        "About": {
+            "Author": {"value": "DevOps Engineering Team"},
+            "Contact": {"Value": "cwdsdevopsengineering@osi.ca.gov"},
+            "CreatedDate": {"Value": "May 22, 2018"},
+            "UpdatedDate": {"Value": "{{ansible_date_time.date}}"}
+        }
+    },
+    "Parameters": {
+		"EnvName": {
+            "Description": "Environment name",
+			"Type": "String"
+        },
+        "PatchGroups1" : {
+            "Description": "Patch Group name",
+			"Type": "String"
+        },
+        "PatchGroups2" : {
+            "Description": "Patch Group name",
+			"Type": "String"
+        },
+        "PatchGroups3" : {
+            "Description": "Patch Group name",
+			"Type": "String"
+        },
+        "PrivateSubnet3A":{
+            "Description": "Private Zone A Subnet ID",
+			"Type": "AWS::EC2::Subnet::Id"
+        },
+        "KeyName": {	
+            "Description": "Keyfile name that needs to be added to the instances ",
+            "Type": "String"
+        },
+		"ImageID":{
+            "Description": "Image ID",
+			"Type": "String"
+        },
+		"InstanceType": {
+            "Description": "Instance Type",
+			"Type": "String"
+        },
+        "RundeckInstanceType": {
+            "Description": "Instance Type",
+			"Type": "String"
+        },
+        "DisableApiTermination": {
+            "Description": "Api Termination",
+            "Type": "String"
+        },
+        "ManagedServerRules":{
+             "Description": "Mgmt server sg",
+			"Type": "AWS::EC2::SecurityGroup::Id"
+        },
+        "JenkinsSg":{
+            "Description": "Jenkins sg",
+		    "Type": "AWS::EC2::SecurityGroup::Id"
+        },
+        "Rundecksg":{
+            "Description": "Rundeck sg",
+			"Type": "AWS::EC2::SecurityGroup::Id"
+        },
+        "proxydb2sg": {
+            "Description": "db2 security Group to connect to the proxy for db2 connection",
+			"Type": "AWS::EC2::SecurityGroup::Id"
+        },
+        "NessusImageID": {
+            "Description": "Nessus server Image ID",
+			"Type": "String"
+        },
+        "NessusInstanceType": {
+            "Description": "Nessus Server Instance Type",
+			"Type": "String"
+        },
+        "NessusScannerSg": {
+            "Description": "Nessus Scanner sg",
+			"Type": "AWS::EC2::SecurityGroup::Id" 
+        }
+
+    },
+
+    "Resources": {
+        
+        "Jenkins": {
+            "Type": "AWS::EC2::Instance",
+            "Metadata":{ "Comment": "Jenkins Slave Server on AvailabilityZone west-1a" },
+            "Properties":{
+                "ImageId": { "Ref": "ImageID" },
+                "BlockDeviceMappings": [
+                    {
+                        "DeviceName": "/dev/xvda",
+                        "Ebs": {
+                            "DeleteOnTermination": "true",
+                            "VolumeSize": "100"
+                        }
+                    }
+                ],
+                "InstanceType": {"Ref": "InstanceType"},
+                "SubnetId": { "Ref": "PrivateSubnet3A" },
+                "IamInstanceProfile": "Cloudwatch",
+                "Monitoring": "true",
+                "KeyName": {"Ref":"KeyName"},
+                "InstanceInitiatedShutdownBehavior": "stop",
+                "DisableApiTermination": {"Ref": "DisableApiTermination"},
+                "SecurityGroupIds": [{"Ref": "ManagedServerRules"}, {"Ref": "JenkinsSg"}],
+                "UserData": {"Fn::Base64": {"Fn::Join": ["", [
+                    "#!/bin/bash -ex\n",
+                    "cd /opt\n",
+                    "mkdir jenkins\n",
+                    "chmod 751 jenkins\n",
+                    "chown ansible:ansible jenkins", "\n"
+                ]]}},
+              "Tags": [
+                  {"Key": "Environment", "Value": {"Ref": "EnvName"}},
+                  {"Key": "Role", "Value": "coreservers"},
+                  {"Key": "Name", "Value":  { "Fn::Join": ["",[{"Ref": "EnvName"},"-","jenkins-slave"]]}},
+                  {"Key": "Patch Group", "Value": {"Ref": "PatchGroups1"}}
+              ]
+            }
+        },
+        "RundeckServerA": {
+            "Type": "AWS::EC2::Instance",
+            "Metadata":{ "Comment": "Rundeck Server on AvailabilityZone west-1a" },
+            "Properties":{
+                "ImageId": { "Ref": "ImageID" },
+                "BlockDeviceMappings": [
+                    {
+                        "DeviceName": "/dev/xvda",
+                        "Ebs": {
+                            "DeleteOnTermination": "true",
+                            "VolumeSize": "100"
+                        }
+                    }
+                ],
+                "InstanceType": {"Ref": "RundeckInstanceType"},
+                "SubnetId": { "Ref": "PrivateSubnet3A" },
+                "IamInstanceProfile": "Cloudwatch",
+                "Monitoring": "true",
+                "KeyName": {"Ref":"KeyName"},
+                "InstanceInitiatedShutdownBehavior": "stop",
+                "DisableApiTermination": {"Ref": "DisableApiTermination"},
+                "SecurityGroupIds": [{ "Ref" : "ManagedServerRules"},{ "Ref" : "proxydb2sg"},{"Ref": "Rundecksg"}],
+             "Tags": [
+                  {"Key": "Environment", "Value": {"Ref": "EnvName"}},
+                  {"Key": "Role", "Value": "coreservers"},
+                  {"Key": "Name", "Value":  { "Fn::Join": ["",[{"Ref": "EnvName"},"-","rundeck"]]}},
+                  {"Key": "Patch Group", "Value": {"Ref": "PatchGroups1"}}
+              ]
+            }
+        },
+        "NesusScanner": {
+            "Type": "AWS::EC2::Instance",
+            "Metadata":{ "Comment": "Nessus pre-authorized servers on AvailabilityZone west-1a" },
+            "Properties":{
+                "ImageId": { "Ref": "NessusImageID" },
+                "BlockDeviceMappings": [
+                    {
+                        "DeviceName": "/dev/xvda",
+                        "Ebs": {
+                            "DeleteOnTermination": "true",
+                            "VolumeSize": "100"
+                        }
+                    },
+                    {
+                        "DeviceName" : "/dev/sdb",
+                        "Ebs" : {
+                            "DeleteOnTermination" : "false",
+                            "VolumeSize" : "200"
+                        }
+                    }
+                ],
+                "InstanceType": {"Ref": "NessusInstanceType"},
+                "SubnetId": { "Ref": "PrivateSubnet3A" },
+                "IamInstanceProfile": "TenableIO",
+                "Monitoring": "true",
+                "EbsOptimized": "true",
+                "InstanceInitiatedShutdownBehavior": "stop",
+                "DisableApiTermination": {"Ref": "DisableApiTermination"},
+                "SecurityGroupIds": [{"Ref": "NessusScannerSg"}],
+                "UserData":  { "Fn::Base64" : { "Fn::Join" : ["", [
+                  "{",
+                  "\"name\": \"",{"Ref": "EnvName"},"\",",
+                  "\"key\": \"3fb63bc11c748c69d22c447791760a290d6db75d628949dfbb01da9005769c10\"",",",
+                  "\"iam_role\": \"TenableIO\"",
+                  "}"
+        ]]}},
+                "Tags": [
+                    {"Key": "Environment", "Value": {"Ref": "EnvName"}},
+                    {"Key": "Name", "Value":  { "Fn::Join": ["",["nessus","-",{"Ref": "EnvName"}]]}}
+                ]
+            }
+        }
+
+    },
+    
+    "Outputs": {
+        "Jenkins": {
+            "Description": "Jenkins Slave Server Private IP",
+            "Value": {"Fn::GetAtt": ["Jenkins","PrivateIp"]},
+            "Export": { "Name": { "Fn::Join": ["",[{"Ref": "EnvName"},"-","JenkinsSlave"]]}}            
+        },
+        "RundeckServerA": {
+            "Description": "Rundeck Server Private IP",
+            "Value": {"Fn::GetAtt": ["RundeckServerA","PrivateIp"]},
+            "Export": { "Name": { "Fn::Join": ["",[{"Ref": "EnvName"},"-","RundeckServer"]]}}            
+        },
+        "JenkinsInstanceId": {
+            "Description": "Jenkins Slave Instance Id",
+            "Value": {"Ref": "Jenkins"},
+            "Export": { "Name": { "Fn::Join": ["",[{"Ref": "EnvName"},"-","JenkinsSlave-InstanceId"]]}}            
+        },
+        "RundeckServerAInstanceId": {
+            "Description": "Rundeck Server Instance Id",
+            "Value": {"Ref": "RundeckServerA"},
+            "Export": { "Name": { "Fn::Join": ["",[{"Ref": "EnvName"},"-","RundeckServer-InstanceId"]]}}            
+        }
+    }
+}

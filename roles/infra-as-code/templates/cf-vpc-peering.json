@@ -1,0 +1,203 @@
+{
+    "AWSTemplateFormatVersion": "2010-09-09",
+    "Description": "Establish Peering connections between Management VPC to NonProd, Prodlike Environments",
+    "Metadata": {
+        "About": {
+            "Author": {"value": "DevOps Engineering Team"},
+            "Contact": {"Value": "cwdsdevopsengineering@osi.ca.gov"},
+            "CreatedDate": {"Value": "May 22, 2018"},
+            "UpdatedDate": {"Value": "{{ansible_date_time.date}}"}
+        }
+    },
+    "Parameters": {
+             "EnvName": {	
+              "Description": "Env Name",
+              "Type": "String"
+          },
+          "VpcID": {
+              "Description": "Main VPC ID",
+              "Type": "String"
+          },
+          "VpcCidrBlock": {
+              "Description": "VPC Cidr Block",
+              "Type": "String"
+          },
+          "RouteTable1": {
+              "Description": "Route Table 1",
+              "Type": "String"
+          },
+          "RouteTable2A": {
+              "Description": "Route Table 2A",
+              "Type": "String"
+          },
+          "RouteTable2C": {
+              "Description": "Route Table 2AA",
+              "Type": "String"
+          },
+          "ManagementVpcId": {
+              "Description": "Management VPC ID",
+              "Type": "String"
+          },
+          "ManagementVpcCidr": {
+              "Description": "Management VPC Cidr range for peering",
+              "Type": "String"
+          },
+          "ManagementRoute1": {
+              "Description": "Management Route Table 1",
+              "Type": "String"
+          },
+          "ManagementRoute2": {
+              "Description": "Management Route Table 2",
+              "Type": "String"
+          },
+          "ProxyVpcId": {
+              "Description": "Proxy VPC ID",
+              "Type": "String"
+          },
+          "ProxyRoute1": {
+              "Description": "Proxy VPC Route",
+              "Type": "String"
+          },
+          "ProxyRoute2": {
+              "Description": "Proxy VPC Route",
+              "Type": "String"
+          },
+          "ProxyVpcCidr": {
+              "Description": "Proxy VPC Cidr",
+              "Type": "String"
+          }
+    },
+    "Resources": {
+        "VPCpeering1" : {
+            "Type": "AWS::EC2::VPCPeeringConnection",
+            "Metadata": {
+                "Comment": "Vpc Peering between Management VPC and the VPC created"
+            },
+            "Properties": {
+                "PeerVpcId": {"Ref": "ManagementVpcId"},
+                "VpcId": {"Ref": "VpcID"},
+                "Tags": [
+                  {"Key": "Environment", "Value": {"Ref": "EnvName"}},
+                  {"Key": "Role", "Value":"peering-network"},
+                  {"Key": "Name", "Value": { "Fn::Join": ["",["vpc-peering","-",{ "Ref": "EnvName"}]]}}              ]
+            }
+        },
+        "ManagementRoute1Peering": {
+            "Type": "AWS::EC2::Route",
+            "Metadata":{ "Comment": "Peering Management Route1 with the VPC of the Environment Created" },
+            "Properties": {
+                "DestinationCidrBlock": {"Ref": "VpcCidrBlock"},
+                "RouteTableId" : {"Ref":"ManagementRoute1"},
+                "VpcPeeringConnectionId" : {"Ref": "VPCpeering1"}
+            }
+        },
+        "ManagementRoute2Peering": {
+            "Type": "AWS::EC2::Route",
+            "Metadata":{ "Comment": "Peering Management Route2 with the VPC of the Environment Created" },
+            "Properties": {
+                "DestinationCidrBlock": {"Ref": "VpcCidrBlock"},
+                "RouteTableId" : {"Ref": "ManagementRoute2"},
+                "VpcPeeringConnectionId" : {"Ref": "VPCpeering1"}
+            }
+        },
+        "VpcRoute1MgmtPeering": {
+            "Type": "AWS::EC2::Route",
+            "Metadata":{ "Comment": "Peering the New Environment Route1 with the VPC of the Management" },
+            "Properties": {
+                "DestinationCidrBlock": {"Ref": "ManagementVpcCidr"},
+                "RouteTableId" :{"Ref": "RouteTable1"},
+                "VpcPeeringConnectionId" : {"Ref": "VPCpeering1"}
+            }
+        },
+        "VpcRoute2AMgmtPeering": {
+            "Type": "AWS::EC2::Route",
+            "Metadata":{ "Comment": "Peering the New Environment Route2A with the VPC of the Management" },
+            "Properties": {
+                "DestinationCidrBlock": {"Ref": "ManagementVpcCidr"},
+                "RouteTableId" :{"Ref": "RouteTable2A"},
+                "VpcPeeringConnectionId" : {"Ref": "VPCpeering1"}
+            }
+        },
+        "VpcRoute2CMgmtPeering": {
+            "Type": "AWS::EC2::Route",
+            "Metadata":{ "Comment": "Peering the New Environment Route2C with the VPC of the Management" },
+            "Properties": {
+                "DestinationCidrBlock": {"Ref": "ManagementVpcCidr"},
+                "RouteTableId" :{"Ref": "RouteTable2C"},
+                "VpcPeeringConnectionId" : {"Ref": "VPCpeering1"}
+            }
+        },
+        "VPCpeering2" : {
+            "Type": "AWS::EC2::VPCPeeringConnection",
+            "Metadata": {
+                "Comment": "Vpc Peering between Proxy VPC and the VPC created"
+            },
+            "Properties": {
+                "PeerVpcId": {"Ref": "ProxyVpcId"},
+                "VpcId": {"Ref": "VpcID"},
+                "Tags": [
+                  {"Key": "Environment", "Value": {"Ref": "EnvName"}},
+                  {"Key": "Role", "Value":"peering-network"},
+                  {"Key": "Name", "Value": { "Fn::Join": ["",["proxy-vpc-peering","-",{ "Ref": "EnvName"}]]}}              ]
+            }
+        },
+        "ProxyRoute1Peering": {
+            "Type": "AWS::EC2::Route",
+            "Metadata":{ "Comment": "Peering Proxy Route1 with the VPC of the Environment Created" },
+            "Properties": {
+                "DestinationCidrBlock": {"Ref": "VpcCidrBlock"},
+                "RouteTableId" : {"Ref":"ProxyRoute1"},
+                "VpcPeeringConnectionId" : {"Ref": "VPCpeering2"}
+            }
+        },
+        "ProxyRoute2Peering": {
+            "Type": "AWS::EC2::Route",
+            "Metadata":{ "Comment": "Peering Proxy Route2 with the VPC of the Environment Created" },
+            "Properties": {
+                "DestinationCidrBlock": {"Ref": "VpcCidrBlock"},
+                "RouteTableId" : {"Ref":"ProxyRoute2"},
+                "VpcPeeringConnectionId" : {"Ref": "VPCpeering2"}
+            }
+        },
+        "VpcRoute1Peering": {
+            "Type": "AWS::EC2::Route",
+            "Metadata":{ "Comment": "Peering the New Environment Route1 with the VPC of the Proxy server" },
+            "Properties": {
+                "DestinationCidrBlock": {"Ref": "ProxyVpcCidr"},
+                "RouteTableId" :{"Ref": "RouteTable1"},
+                "VpcPeeringConnectionId" : {"Ref": "VPCpeering2"}
+            }
+        },
+        "VpcRoute2APeering": {
+            "Type": "AWS::EC2::Route",
+            "Metadata":{ "Comment": "Peering the New Environment Route2A with the VPC of the Proxy server" },
+            "Properties": {
+                "DestinationCidrBlock": {"Ref": "ProxyVpcCidr"},
+                "RouteTableId" :{"Ref": "RouteTable2A"},
+                "VpcPeeringConnectionId" : {"Ref": "VPCpeering2"}
+            }
+        },
+        "VpcRoute2CPeering": {
+            "Type": "AWS::EC2::Route",
+            "Metadata":{ "Comment": "Peering the New Environment Route2C with the VPC of the Proxy server" },
+            "Properties": {
+                "DestinationCidrBlock": {"Ref": "ProxyVpcCidr"},
+                "RouteTableId" :{"Ref": "RouteTable2C"},
+                "VpcPeeringConnectionId" : {"Ref": "VPCpeering2"}
+            }
+        }
+  },
+  
+    "Outputs": {
+        "MgmtVpcPeeringID": {
+            "Description": "Peering ID between Management VPC and new env",
+            "Value": {"Ref": "VPCpeering1"},
+            "Export": {"Name": { "Fn::Join": ["",[{ "Ref": "EnvName"},"-","Mgmt-PeeringId"]]}}
+        },
+        "ProxyVpcPeeringID": {
+            "Description": "Peering ID between Proxy VPC and new env",
+            "Value": {"Ref": "VPCpeering2"},
+            "Export": {"Name": { "Fn::Join": ["",[{ "Ref": "EnvName"},"-","Proxy-PeeringId"]]}}
+        }
+    }
+  }  

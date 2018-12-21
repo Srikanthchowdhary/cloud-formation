@@ -1,0 +1,174 @@
+##########################
+#### Custom Variables ####
+##########################
+
+## environment_name: Name of the environment that needs to be created/updated
+# Availability Zone where subnets need to be created
+environment_name: preint
+availabilityzoneA: us-west-1a
+availabilityzoneC: us-west-1c
+
+### VPC Parameters
+## Provide VPC Cidr range and subnets within the same range
+vpc_cidr: 10.211.52.0/24
+public_cidr2a: 10.X.X.X/27
+public_cidr2c: 10.X.X.X/27
+private_cidr1a: 10.X.X.X/27
+private_cidr1c: 10.X.X.X/27
+private_cidr2a: 10.X.X.X/27
+private_cidr2c: 10.X.X.X/27
+private_cidr3a: 10.X.X.X/27
+
+
+## image_id: Golden Image ID is different for prod and non prod environments. 
+    ## Allowed Values
+        ## Non Prod: ami-c16755a1
+        ## Prod: ami-b56a58d5
+## nessus_image_id: Image id of nesssus scanner
+## keyname: Name of the keypair created for the environment
+## ssl_certificate_id: generate and validate ssl vertificate that need to be used. provide the arn value of the generated certificate
+## instancetype: Instance types of all servers that need to be created
+## nessus_instancetype:: instance type of the nessus scanner
+## rundeck_instancetype: rundeck server instance type
+## elasticsearch_instancetype: elasticsearch instance type
+## disable_api_termination: set to true if server needs not to be terminated accidentally. Preferred: true
+## openvpn_sg: security group id of the OpenVpn that is peered to the envitonment created/updated
+    ## Allowed Values
+        ## NonProd: sg-XXXXXXXXX
+        ## New NonProd: sg-XXXXXXXX (Add this if vpc peering is made to new non prod environment)
+        ## Prod: sg-XXXXXXXX
+## trendmicro_sg: security group id of the trendmicro deep scan 
+    ## Allowed Values
+        ## NonProd: sg-XXXXXXXX
+        ## New NonProd:  sg-XXXXXXXX
+        ## Prod: Not Configured Yet
+## saf_cidr: saf cidr range
+## hostedzone_name: name of the dns hosted zone. cwds.io is the default hosted zone
+image_id: ami-c16755a1
+nessus_image_id: ami-ea3cda89
+keyname: cwds_preint_keypair
+ssl_certificate_id: arn:aws:acm:us-west-1:XXXXXXXXXXXX:certificate/XXXXXXX-XXXX-XXXX-XXXX-XXXXXXXXXXXX
+instancetype: t2.large
+nessus_instancetype: m4.large
+rundeck_instancetype: t2.medium
+elasticsearch_instancetype: m4.xlarge
+disable_api_termination: 'false'
+openvpn_sg: sg-XXXXXXX
+trendmicro_sg: sg-XXXXXXX
+saf_cidr: 162.X.X.X/32
+hostedzone_name: GOOGLE.io
+
+
+### PatchGroups : patch groups that needs to be assigned to the baseline
+    ## AllowedValues: 
+        ## dev-nvironments (preint,integration, sandboxcans): dev-group1, dev-group2, dev-group3
+        ## stable-environments (staging, performance, demp-int, training): stable-group1, stable-group2, stable-group3
+        ## Prod-environments (prod, preprod): prod-group1, prod-group2, prod-group3
+PatchGroups1: dev-group1
+PatchGroups2: dev-group2
+PatchGroups3: dev-group3
+
+####################
+#### Conditions ####
+####################
+
+## environment_type: Allowed values - docker / nondocker
+## idpdeploy: Allowed Values - true/false  - default: false
+## cmapideploy: Allowed Values - true/false  - default: false
+## formsapideploy: Allowed Values - true/false  - default: false
+## createES1node: Allowed Values - true/false. Set to false if it is a 3ndoe elasticsearch cluster
+## cansdeploy: Allowed Values - true/false  - default: false
+environment_type: nondocker
+idpdeploy: 'false'
+cmapideploy: 'false'
+formsapideploy: 'true'
+elasticsearch_1node: 'false'
+cansdeploy: 'true'
+perry3node: 'false'
+
+######################
+#### DB Variables ####
+######################
+
+## postgresrds: set to true when environment_type=non-docker and false when environment_type=docker 
+## postgres_read_replica: Read replica creates the replication for the potgres rds database. 
+        ## Allowed Values - true/false. 
+        ## postgres_read_replica=true for all production type environments
+        ## postgres_read_replica=false for all nonprod environments by default OR when postgresrds=false
+## dbinstance_type: rds instance type
+        ## Allowed Values: select the appropriate type based on the requirement 
+        ## The information for instance types can be found in https://aws.amazon.com/rds/instance-types/
+## db_allocated_storage: rds allocated storage value
+## iops:  Iops for postgres The number of I/O operations per second (IOPS) that the database provisions. The value must be equal to or greater than 1000
+## db_username:
+        ## The master user name for the DB instance. 
+        ## You can name this similar to your ENVIRONMENT. Eg: env_name-postgres
+## db_name: 
+        ## The name of the DB instance that was provided at the time of creation, if one was specified. 
+        ## This same name is returned for the life of the DB instance
+postgresrds: 'true'
+postgres_read_replica: 'false'
+dbinstance_type: db.t2.small
+db_allocated_storage: 100
+PostgresVersion: 10.5
+PostgresVersionUpgrade: 'false'
+PostgresParameterGroup: postgres10
+iops: 1000
+db_username: preint_postgres
+db_name: preint
+
+## elasticsearch_volume: size of the elasticsearch server volume
+## cache_node_type: redis elastic cache node type
+        ## Allowed values: cache.t2.small, cache.t2.medium ....
+        ## update the cache node type id required. 
+        ## default value cache.t2.small
+## redis_cache_clusters: number od cache clusters reuired
+        ## default vaule: 1
+## redis_automatic_failover_enabled:  default value is false
+        ## set to true for Prod environment
+elasticsearch_volume: 100
+cache_node_type: cache.t2.small
+redis_cache_clusters: 1
+redis_automatic_failover_enabled: 'false'
+
+#############################
+#### Peering Connections ####
+#############################
+
+## Proxy Network for the environment to get peered with,  for db and web gateway access
+## Allowed Values for NonProd: 
+      ## without DirectConnect: proxy2
+      ## with DirectConnect: nonprod-gateway
+## Allowed Values for Prod: 
+      ## without DirectConnect: production-gateway
+      ## with DirectConnect: prod-dcgateway
+proxy-network: nonprod-gateway
+## Managemet Server peering Connections
+        ## Non Prod Allowed Values: 
+            ## Management-VPC-ID,Management-VPC-CIDR, Management-VPC-Route1, Management-VPC-Route2
+            ## non-prod-VPC-ID,non-prod-CidrBlock, non-prod-Route1-ID, non-prod-PubgatewayRoute
+        ## Production Allowed Values:
+            ## prod-VPC-ID,prod-CidrBlock, prod-Route1-ID, prod-PubgatewayRoute
+management_vpc_id: Management-VPC-ID
+management_vpc_cidr: Management-VPC-CIDR
+management_vpc_route1: Management-VPC-Route1
+management_vpc_route2: Management-VPC-Route2
+
+#############################
+#### Security Group Id's ####
+#############################
+
+## Jenkins MasterNode Security Group Id
+## This security group id is required for jenkins master node to reach the slave node of the environment
+    ## Allowed Values:
+        ## NonProd Management jenkins: Jenkins-master-sg
+        ## New Nonprod Management Jenkins: np-mgmt-JenkinsSg
+        ## Prod Management Jenkins: prod-mgmt-JenkinsSg
+## Synthetics Menion Server Security Group Id
+## This security group id is required for synthetic menion server node to reach the endpoints
+    ## Allowed Values:
+        ## Management jenkins: mgmt-SyntheticsMenionSg
+        ## New Nonprod Management Jenkins: np-mgmt-SyntheticsMenionSg
+        ## Prod Management Jenkins: prod-mgmt-SyntheticsMenionSg
+jenkins-management-sg: Jenkins-master-sg
+SyntheticsMenionSg: mgmt-SyntheticsMenionSg

@@ -1,0 +1,762 @@
+{
+    "AWSTemplateFormatVersion": "2010-09-09",
+    "Description": "Security Groups",
+    "Metadata": {
+        "About": {
+            "Author": {"value": "DevOps Engineering Team"},
+            "Contact": {"Value": "cwdsdevopsengineering@osi.ca.gov"},
+            "CreatedDate": {"Value": "May 22, 2018"},
+            "UpdatedDate": {"Value": "{{ansible_date_time.date}}"}
+        }
+    },
+    "Parameters": {
+        "VpcID": {
+	        "Description": "Main VPC ID",
+            "Type": "String"
+		},
+        "EnvName": {
+    	    "Description": "Env Name",
+	        "Type": "String"
+	    },
+        "OpenVpnSg":{
+            "Description": "OpenVPN Cidr Block",
+            "Type": "String"
+        },
+        "SafCidr": {
+            "Description": "Saf Connectivity",
+            "Type": "String"
+        },
+        "NatCidrA":{
+            "Description": "NatGateway Cidr Block",
+			"Type": "String"
+        },
+        "NatCidrC":{
+            "Description": "NatGateway Cidr Block",
+			"Type": "String"
+        },
+        "JenkinsMgmtSg":{
+            "Description": "Jenkins Cidr Block",
+            "Type": "String"
+        },
+        "TrendmicroSg": {
+            "Description": "Trend Micro SG",
+            "Type": "String"
+        },
+        "SyntheticsMenionSg": {
+            "Description": "menion server SG",
+            "Type": "String"
+        }
+    },  
+         
+    "Resources": {
+
+        "WebProxyGatewaySg": {
+			"Type": "AWS::EC2::SecurityGroup",
+			"Properties": {
+				"GroupDescription": "security group for proxy pass from webserver",
+				"VpcId": { "Ref": "VpcID" },
+				"SecurityGroupIngress": [
+                    { "SourceSecurityGroupId": { "Ref": "OpenVpnSg" }, "FromPort": 80, "IpProtocol": "tcp", "ToPort": 80 },
+                    { "SourceSecurityGroupId": { "Ref": "OpenVpnSg" }, "FromPort": 443, "IpProtocol": "tcp", "ToPort": 443 },
+                    { "SourceSecurityGroupId": { "Ref": "Appsg" }, "FromPort": 443, "IpProtocol": "tcp", "ToPort": 443 },
+                    { "SourceSecurityGroupId": { "Ref": "WebGatewayElbSg" }, "FromPort": 443, "IpProtocol": "tcp", "ToPort": 443 }
+				],
+              "Tags": [
+                  {"Key": "Environment", "Value": {"Ref": "EnvName"}},
+                  {"Key": "Role", "Value": "security-groups"},
+                  {"Key": "Name", "Value":  { "Fn::Join": ["",[{"Ref": "EnvName"},"-","WebProxy-gateway-sg"]]}}
+              ]
+			}
+		},
+        "WebProxyGatewaySg2": {
+			"Type": "AWS::EC2::SecurityGroup",
+			"Properties": {
+				"GroupDescription": "Dummy proxy pass server to avoid circular dependencies",
+				"VpcId": { "Ref": "VpcID" },
+				"SecurityGroupIngress": [
+                    { "SourceSecurityGroupId": { "Ref": "OpenVpnSg" }, "FromPort": 80, "IpProtocol": "tcp", "ToPort": 80 },
+                    { "SourceSecurityGroupId": { "Ref": "OpenVpnSg" }, "FromPort": 443, "IpProtocol": "tcp", "ToPort": 443 }
+				],
+              "Tags": [
+                  {"Key": "Environment", "Value": {"Ref": "EnvName"}},
+                  {"Key": "Role", "Value": "security-groups"},
+                  {"Key": "Name", "Value":  { "Fn::Join": ["",[{"Ref": "EnvName"},"-","WebProxy-gateway2-sg"]]}}
+              ]
+			}
+		},
+        "WebGatewayElbSg": {
+			"Type": "AWS::EC2::SecurityGroup",
+			"Properties": {
+				"GroupDescription": "WebGateway LoadBalancer Security Group",
+				"VpcId": { "Ref": "VpcID" },
+				"SecurityGroupIngress": [
+                    { "SourceSecurityGroupId": { "Ref": "OpenVpnSg" }, "FromPort": 443, "IpProtocol": "tcp", "ToPort": 443 },
+                    { "SourceSecurityGroupId": { "Ref": "Appsg" }, "FromPort": 443, "IpProtocol": "tcp", "ToPort": 443 },
+                    { "SourceSecurityGroupId": { "Ref": "Apisg" }, "FromPort": 443, "IpProtocol": "tcp", "ToPort": 443 },
+                    { "SourceSecurityGroupId": { "Ref": "Rundecksg" }, "FromPort": 443, "IpProtocol": "tcp", "ToPort": 443 },
+                    { "SourceSecurityGroupId": { "Ref": "JenkinsSg" }, "FromPort": 443, "IpProtocol": "tcp", "ToPort": 443 },
+                    { "SourceSecurityGroupId":{"Ref": "SyntheticsMenionSg"}, "FromPort": 443, "IpProtocol": "tcp","ToPort": 443}
+				],
+              "Tags": [
+                  {"Key": "Environment", "Value": {"Ref": "EnvName"}},
+                  {"Key": "Role", "Value": "security-groups"},
+                  {"Key": "Name", "Value":  { "Fn::Join": ["",[{"Ref": "EnvName"},"-","WebElb-sg"]]}}
+              ]
+			}
+		},
+
+        "ManagedServerRules": {
+            "Type": "AWS::EC2::SecurityGroup",
+            "Properties": {
+                "GroupDescription": "Managed Server Security Group",
+                "VpcId": { "Ref": "VpcID" },
+                "SecurityGroupIngress": [
+                    {
+                        "IpProtocol": "tcp",
+                        "FromPort": "22",
+                        "ToPort": "22",
+                        "SourceSecurityGroupId": {"Ref": "OpenVpnSg"}
+                    },
+                    {
+                        "IpProtocol": "tcp",
+                        "FromPort": "22",
+                        "ToPort": "22",
+                        "SourceSecurityGroupId": {"Ref": "JenkinsSg"}
+                    },
+                    {
+                        "IpProtocol": "tcp",
+                        "FromPort": "22",
+                        "ToPort": "22",
+                        "SourceSecurityGroupId": {"Ref": "Rundecksg"}
+                    },
+                    {
+                        "IpProtocol": -1,
+                        "SourceSecurityGroupId": {"Ref": "NessusScannerSg"}
+                    },
+                    {
+                        "IpProtocol": "tcp",
+                        "FromPort": "4118",
+                        "ToPort": "4118",
+                        "SourceSecurityGroupId": {"Ref": "TrendmicroSg"}
+                    }
+                ],
+                "Tags": [
+                  {"Key": "Environment", "Value": {"Ref": "EnvName"}},
+                  {"Key": "Role", "Value": "security-groups"},
+                  {"Key": "Name", "Value":  { "Fn::Join": ["",[{"Ref": "EnvName"},"-","mgmt-Server-rules-sg"]]}}
+                ]
+            }
+        },
+
+        "NessusScannerSg": {
+            "Type": "AWS::EC2::SecurityGroup",
+            "Properties": {
+                "GroupDescription": "Nessus preauthorized server Security Group",
+                "VpcId": { "Ref":"VpcID" },
+                "Tags": [
+                  {"Key": "EnvName", "Value": {"Ref": "EnvName"}},
+                  {"Key": "Role", "Value": "security-groups"},
+                  {"Key": "Name", "Value":  { "Fn::Join": ["",[{"Ref": "EnvName"},"-","nessus-sg"]]}}
+                ]
+            }
+        },
+
+        "WebAppsg": {
+            "Type": "AWS::EC2::SecurityGroup",
+            "Properties": {
+                "GroupDescription": "Web App Security group for All App loadbalancers",
+                "VpcId": { "Ref": "VpcID" },
+                "SecurityGroupIngress": [
+                    {
+                        "IpProtocol": "tcp",
+                        "FromPort": "443",
+                        "ToPort": "443",
+                        "SourceSecurityGroupId": {"Ref": "OpenVpnSg"}
+                    },
+                    {
+                        "IpProtocol": "tcp",
+                        "FromPort": "443",
+                        "ToPort": "443",
+                        "SourceSecurityGroupId": {"Ref": "JenkinsSg"}
+                    },
+                    {
+                        "IpProtocol": "tcp",
+                        "FromPort": "443",
+                        "ToPort": "443",
+                        "SourceSecurityGroupId":{"Ref": "WebProxyGatewaySg2"}
+                    },
+                    {
+                        "IpProtocol": "tcp",
+                        "FromPort": "443",
+                        "ToPort": "443",
+                        "SourceSecurityGroupId":{"Ref": "SyntheticsMenionSg"}
+                    }
+                ],
+               "Tags": [
+                  {"Key": "Environment", "Value": {"Ref": "EnvName"}},
+                  {"Key": "Role", "Value": "security-groups"},
+                  {"Key": "Name", "Value":  { "Fn::Join": ["",[{"Ref": "EnvName"},"-","webApp-sg"]]}}
+              ]
+            }
+        },
+      "Appsg": {
+            "Type": "AWS::EC2::SecurityGroup",
+            "Properties": {
+                "GroupDescription": "App Security Group (Front end)",
+                "VpcId": { "Ref": "VpcID" },
+                "SecurityGroupIngress": [
+                    {
+                        "IpProtocol": "tcp",
+                        "FromPort": "80",
+                        "ToPort": "80",
+                        "SourceSecurityGroupId": {"Ref": "OpenVpnSg"}
+                    },
+                    {
+                        "IpProtocol": "tcp",
+                        "FromPort": "80",
+                        "ToPort": "80",
+                        "SourceSecurityGroupId":{"Ref": "WebAppsg"}
+                    },
+                    {
+                        "IpProtocol": "tcp",
+                        "FromPort": "8081",
+                        "ToPort": "8096",
+                        "SourceSecurityGroupId": {"Ref": "OpenVpnSg"}
+                    },
+                    {
+                        "IpProtocol": "tcp",
+                        "FromPort": "8081",
+                        "ToPort": "8096",
+                        "SourceSecurityGroupId":{"Ref": "WebAppsg"}
+                    },
+                    {
+                        "IpProtocol": "tcp",
+                        "FromPort": "9080",
+                        "ToPort": "9080",
+                        "SourceSecurityGroupId": {"Ref": "OpenVpnSg"}
+                    },
+                    {
+                        "IpProtocol": "tcp",
+                        "FromPort": "9080",
+                        "ToPort": "9080",
+                        "SourceSecurityGroupId":{"Ref": "WebAppsg"}
+                    }
+                ],
+               "Tags": [
+                  {"Key": "Environment", "Value": {"Ref": "EnvName"}},
+                  {"Key": "Role", "Value": "security-groups"},
+                  {"Key": "Name", "Value":  { "Fn::Join": ["",[{"Ref": "EnvName"},"-","app-sg"]]}}
+              ]
+            }
+        },
+        "Perrysg": {
+            "Type": "AWS::EC2::SecurityGroup",
+            "Properties": {
+                "GroupDescription": "Perry Security Group Configuration",
+                "VpcId": { "Ref": "VpcID" },
+                "SecurityGroupIngress": [
+                        {
+                        "IpProtocol": "tcp",
+                        "FromPort": "8080",
+                        "ToPort": "8080",
+                        "SourceSecurityGroupId":{"Ref": "WebPerryExternalsg"}
+                        },
+                        {
+                          "IpProtocol": "tcp",
+                          "FromPort": "9081",
+                          "ToPort": "9081",
+                          "SourceSecurityGroupId":{"Ref": "OpenVpnSg"}
+                        },
+                        {
+                        "IpProtocol": "tcp",
+                        "FromPort": "8080",
+                        "ToPort": "8080",
+                        "SourceSecurityGroupId": {"Ref": "OpenVpnSg"}
+                        }
+                ],
+                "Tags": [
+                  {"Key": "Environment", "Value": {"Ref": "EnvName"}},
+                  {"Key": "Role", "Value": "security-groups"},
+                  {"Key": "Name", "Value":  { "Fn::Join": ["",[{"Ref": "EnvName"},"-","perry-sg"]]}}
+              ]
+            }
+        },
+        "IDPsg": {
+          "Type": "AWS::EC2::SecurityGroup",
+          "Properties": {
+            "GroupDescription": "IDP Security Group Configuration",
+            "VpcId": { "Ref": "VpcID" },
+            "SecurityGroupIngress": [
+              {
+                "IpProtocol": "tcp",
+                "FromPort": "443",
+                "ToPort": "443",
+                "SourceSecurityGroupId": {"Ref": "WebProxyGatewaySg"}
+              },
+              {
+                "IpProtocol": "tcp",
+                "FromPort": "443",
+                "ToPort": "443",
+                "SourceSecurityGroupId": {"Ref": "OpenVpnSg"}
+              }
+            ],
+            "Tags": [
+              {"Key": "Environment", "Value": {"Ref": "EnvName"}},
+              {"Key": "Role", "Value": "security-groups"},
+              {"Key": "Name", "Value":  { "Fn::Join": ["",[{"Ref": "EnvName"},"-","idp-sg"]]}}
+            ]
+          }
+        },
+        "WebPerryExternalsg" : {
+            "Type" : "AWS::EC2::SecurityGroup",
+            "Properties" : {
+              "GroupDescription" : "Security group for Perry Authentication",
+              "SecurityGroupIngress" : [
+                {
+                    "IpProtocol": "tcp",
+                    "FromPort": "443",
+                    "ToPort": "443",
+                    "CidrIp": "158.96.0.0/16"
+                },
+                {
+                    "IpProtocol": "tcp",
+                    "FromPort": "443",
+                    "ToPort": "443",
+                    "CidrIp": {"Ref": "SafCidr"}
+                },
+                {
+                    "IpProtocol": "tcp",
+                    "FromPort": "443",
+                    "ToPort": "443",
+                    "CidrIp": {"Ref": "NatCidrA" }
+                },
+                {
+                    "IpProtocol": "tcp",
+                    "FromPort": "443",
+                    "ToPort": "443",
+                    "CidrIp": {"Ref": "NatCidrC"}
+                },
+                {
+                    "IpProtocol": "tcp",
+                    "FromPort": "443",
+                    "ToPort": "443",
+                    "SourceSecurityGroupId":{"Ref": "SyntheticsMenionSg"}
+                }
+              ],
+              "VpcId": { "Ref": "VpcID" },
+                "Tags": [
+                    {"Key": "Environment", "Value": {"Ref": "EnvName"}},
+                    {"Key": "Role", "Value": "security-groups"},
+                    {"Key": "Name", "Value":  { "Fn::Join": ["",[{"Ref": "EnvName"},"-","webperryExternal-sg"]]}}
+                ]
+            }
+          },
+
+        "WebApisg": {
+            "Type": "AWS::EC2::SecurityGroup",
+            "Properties": {
+                "GroupDescription": "Web Api Security Group",
+                "VpcId": { "Ref": "VpcID" },
+                "SecurityGroupIngress": [
+                    {
+                        "IpProtocol": "tcp",
+                        "FromPort": "443",
+                        "ToPort": "443",
+                        "SourceSecurityGroupId": {"Ref": "OpenVpnSg"}
+                    },
+                    {
+                      "IpProtocol": "tcp",
+                      "FromPort": "443",
+                      "ToPort": "443",
+                      "SourceSecurityGroupId": {"Ref": "JenkinsSg"}
+                    },
+                    {
+                        "IpProtocol": "tcp",
+                        "FromPort": "443",
+                        "ToPort": "443",
+                        "SourceSecurityGroupId":{"Ref": "Appsg"}
+                    },
+		            {
+                        "IpProtocol": "tcp",
+                        "FromPort": "443",
+                        "ToPort": "443",
+                        "SourceSecurityGroupId":{"Ref": "Perrysg"}
+                    },
+                    {
+                        "IpProtocol": "tcp",
+                        "FromPort": "443",
+                        "ToPort": "443",
+                        "SourceSecurityGroupId":{"Ref": "SyntheticsMenionSg"}
+                    }
+
+                ],
+                "Tags": [
+                    {"Key": "Environment", "Value": {"Ref": "EnvName"}},
+                    {"Key": "Role", "Value": "security-groups"},
+                    {"Key": "Name", "Value":  { "Fn::Join": ["",[{"Ref": "EnvName"},"-","webdora-api-sg"]]}}
+                ]     
+            }
+        },
+        "Apisg": {
+            "Type": "AWS::EC2::SecurityGroup",
+            "Properties": {
+                "GroupDescription": "Dora Api Security Group",
+                "VpcId": { "Ref": "VpcID" },
+                "SecurityGroupIngress": [
+                    {
+                        "IpProtocol": "tcp",
+                        "FromPort": "80",
+                        "ToPort": "80",
+                        "SourceSecurityGroupId": {"Ref": "OpenVpnSg"}
+                    },
+                    {
+                        "IpProtocol": "tcp",
+                        "FromPort": "80",
+                        "ToPort": "80",
+                        "SourceSecurityGroupId":{"Ref": "WebApisg"}
+                    },
+                    {
+                        "IpProtocol": "tcp",
+                        "FromPort": "8081",
+                        "ToPort": "8089",
+                        "SourceSecurityGroupId": {"Ref": "OpenVpnSg"}
+                    },
+                    {
+                        "IpProtocol": "tcp",
+                        "FromPort": "8081",
+                        "ToPort": "8089",
+                        "SourceSecurityGroupId": {"Ref": "WebApisg"}
+                    }
+                ],
+                "Tags": [
+                        {"Key": "Environment", "Value": {"Ref": "EnvName"}},
+                        {"Key": "Role", "Value": "security-groups"},
+                        {"Key": "Name", "Value":  { "Fn::Join": ["",[{"Ref": "EnvName"},"-","api-sg"]]}}
+                ]
+            }
+        },
+        
+        "WebApisg2": {
+            "Type": "AWS::EC2::SecurityGroup",
+            "Properties": {
+                "GroupDescription": "Webapi (avoiding circular dependency) - used for Doraelb and ferbelb",
+                "VpcId": { "Ref": "VpcID" },
+                "SecurityGroupIngress": [
+                    {
+                        "IpProtocol": "tcp",
+                        "FromPort": "443",
+                        "ToPort": "443",
+                        "SourceSecurityGroupId":{"Ref": "Apisg"}
+                    }	
+                ],
+                "Tags": [
+                    {"Key": "Environment", "Value": {"Ref": "EnvName"}},
+                    {"Key": "Role", "Value": "security-groups"},
+                    {"Key": "Name", "Value":  { "Fn::Join": ["",[{"Ref": "EnvName"},"-","webapi-sg2"]]}}
+                ]     
+            }
+        },
+
+        "JenkinsSg" : {
+          "Type" : "AWS::EC2::SecurityGroup",
+          "Properties" : {
+            "GroupDescription" : "Jenkins  SG configuration",
+            "SecurityGroupIngress" : [ 
+                {
+                        "IpProtocol": "tcp",
+                        "FromPort": "22",
+                        "ToPort": "22",
+                        "SourceSecurityGroupId": {"Ref": "JenkinsMgmtSg"}
+                }
+            ],
+            "VpcId": { "Ref": "VpcID" },
+            "Tags": [
+                  {"Key": "Environment", "Value": {"Ref": "EnvName"}},
+                  {"Key": "Role", "Value": "security-groups"},
+                  {"Key": "Name", "Value":  { "Fn::Join": ["",[{"Ref": "EnvName"},"-","Jenkins-sg"]]}}
+              ]
+          }
+        },
+        
+        "Rundecksg": {
+            "Type": "AWS::EC2::SecurityGroup",
+            "Properties": {
+                "GroupDescription": "RunDeck Security Group",
+                "VpcId": { "Ref": "VpcID" },
+                "SecurityGroupIngress": [
+                    {
+                        "IpProtocol": "tcp",
+                        "FromPort": "4440",
+                        "ToPort": "4440",
+                        "SourceSecurityGroupId": {"Ref": "OpenVpnSg"}
+                    },
+                  {
+                    "IpProtocol": "tcp",
+                    "FromPort": "4443",
+                    "ToPort": "4443",
+                    "SourceSecurityGroupId": {"Ref": "OpenVpnSg"}
+                  }
+                ],
+               "Tags": [
+                  {"Key": "Environment", "Value": {"Ref": "EnvName"}},
+                  {"Key": "Role", "Value": "security-groups"},
+                  {"Key": "Name", "Value":  { "Fn::Join": ["",[{"Ref": "EnvName"},"-","rundeck-sg"]]}}
+              ]
+            }
+        },
+        "proxydb2sg" : {
+            "Type" : "AWS::EC2::SecurityGroup",
+            "Properties" : {
+                "GroupDescription" : "dummy security group that points to proxy for db2 connection",
+                "VpcId" : {"Ref" : "VpcID"},
+                "SecurityGroupIngress" : [ 
+                    { 
+                        "IpProtocol" : "tcp", 
+                        "FromPort" : "22", 
+                        "ToPort" : "22", 
+                        "SourceSecurityGroupId" : {"Ref": "OpenVpnSg"} 
+                    }
+                ],
+                "Tags": [
+                  {"Key": "Environment", "Value": {"Ref": "EnvName"}},
+                  {"Key": "Role", "Value": "security-groups"},
+                  {"Key": "Name", "Value":  { "Fn::Join": ["",[{"Ref": "EnvName"},"-","proxy-db2-sg"]]}}
+                ]
+            }
+        },
+        "db2sg" : {
+            "Type" : "AWS::EC2::SecurityGroup",
+            "Properties" : {
+                "GroupDescription" : "DB2 Docker Security Group",
+                "VpcId" : {"Ref" : "VpcID"},
+                "SecurityGroupIngress" : [ 
+                    { "SourceSecurityGroupId": {"Ref": "Apisg"}, "FromPort": "50000", "IpProtocol": "tcp", "ToPort": "50000" },
+                    { "SourceSecurityGroupId": {"Ref": "Rundecksg"}, "FromPort": "50000", "IpProtocol": "tcp", "ToPort": "50000" },
+                    { "SourceSecurityGroupId": {"Ref": "JenkinsSg"}, "FromPort": "50000", "IpProtocol": "tcp", "ToPort": "50000" },
+                    { "SourceSecurityGroupId": {"Ref": "OpenVpnSg"}, "FromPort": "50000", "IpProtocol": "tcp", "ToPort": "50000" },
+                    { "SourceSecurityGroupId": {"Ref": "Perrysg"}, "FromPort": "50000", "IpProtocol": "tcp", "ToPort": "50000" },
+                    { "SourceSecurityGroupId": {"Ref": "Apisg"}, "FromPort": "51000", "IpProtocol": "tcp", "ToPort": "51000" },
+                    { "SourceSecurityGroupId": {"Ref": "JenkinsSg"}, "FromPort": "51000", "IpProtocol": "tcp", "ToPort": "51000" },
+                    { "SourceSecurityGroupId": {"Ref": "Perrysg"}, "FromPort": "51000", "IpProtocol": "tcp", "ToPort": "51000" }
+                ],
+                "Tags": [
+                  {"Key": "Environment", "Value": {"Ref": "EnvName"}},
+                  {"Key": "Role", "Value": "security-groups"},
+                  {"Key": "Name", "Value":  { "Fn::Join": ["",[{"Ref": "EnvName"},"-","db2-sg"]]}}
+                ]
+            }
+        },
+    
+        "elasticsearchsg": {
+            "Type": "AWS::EC2::SecurityGroup",
+            "Properties": {
+                "GroupDescription": "Elastic Security Group ",
+                "VpcId": { "Ref": "VpcID" },
+                "SecurityGroupIngress": [
+                    {
+                        "IpProtocol": "tcp",
+                        "FromPort": "9200",
+                        "ToPort": "9200",
+                        "SourceSecurityGroupId": {"Ref": "Apisg"}
+                    },
+                    {
+                        "IpProtocol": "tcp",
+                        "FromPort": "9200",
+                        "ToPort": "9200",
+                        "SourceSecurityGroupId": {"Ref": "Rundecksg"}
+                    },
+                    {
+                        "IpProtocol": "tcp",
+                        "FromPort": "9300",
+                        "ToPort": "9300",
+                        "SourceSecurityGroupId": {"Ref": "Apisg"}
+                    },
+                    {
+                        "IpProtocol": "tcp",
+                        "FromPort": "9300",
+                        "ToPort": "9300",
+                        "SourceSecurityGroupId": {"Ref": "Rundecksg"}
+                    }
+                ],
+               "Tags": [
+                  {"Key": "Environment", "Value": {"Ref": "EnvName"}},
+                  {"Key": "Role", "Value": "security-groups"},
+                  {"Key": "Name", "Value":  { "Fn::Join": ["",[{"Ref": "EnvName"},"-","es-sg"]]}}
+              ]
+            }
+        },
+        "postgressg" : {
+          "Type" : "AWS::EC2::SecurityGroup",
+          "Properties" : {
+            "GroupDescription" : "Postgres RDS Security Group",
+            "SecurityGroupIngress" : [  
+                { "SourceSecurityGroupId": {"Ref": "Apisg"}, "FromPort": 5431, "IpProtocol": "tcp", "ToPort": 5432 },
+                { "SourceSecurityGroupId": {"Ref": "Rundecksg"}, "FromPort": 5431, "IpProtocol": "tcp", "ToPort": 5432 },
+                { "SourceSecurityGroupId": {"Ref": "Perrysg"}, "FromPort": 5431, "IpProtocol": "tcp", "ToPort": 5432 },
+                { "SourceSecurityGroupId": {"Ref": "OpenVpnSg"}, "IpProtocol": "tcp", "FromPort": "5431","ToPort": "5432"}
+            ],
+            "VpcId": { "Ref": "VpcID" },
+              "Tags": [
+                  {"Key": "Environment", "Value": {"Ref": "EnvName"}},
+                  {"Key": "Role", "Value": "security-groups"},
+                  {"Key": "Name", "Value":  { "Fn::Join": ["",[{"Ref": "EnvName"},"-","postgres-sg"]]}}
+              ]
+          }
+       },
+       "Calspgsg" : {
+          "Type" : "AWS::EC2::SecurityGroup",
+          "Properties" : {
+            "GroupDescription" : "Postgres RDS Security Group",
+            "SecurityGroupIngress" : [  
+                { "SourceSecurityGroupId": {"Ref": "Apisg"}, "FromPort": 5430, "IpProtocol": "tcp", "ToPort": 5430 },
+                { "SourceSecurityGroupId": {"Ref": "Rundecksg"}, "FromPort": 5430, "IpProtocol": "tcp", "ToPort": 5430 },
+                { "SourceSecurityGroupId": {"Ref": "OpenVpnSg"}, "IpProtocol": "tcp", "FromPort": "5430","ToPort": "5430"},
+                { "SourceSecurityGroupId": {"Ref": "Apisg"}, "FromPort": 5431, "IpProtocol": "tcp", "ToPort": 5431 }
+            ],
+            "VpcId": { "Ref": "VpcID" },
+              "Tags": [
+                  {"Key": "Environment", "Value": {"Ref": "EnvName"}},
+                  {"Key": "Application", "Value": {"Ref": "AWS::StackName"}},
+                  {"Key": "Name", "Value":  { "Fn::Join": ["",[{"Ref": "EnvName"},"-","cals-datastub-sg"]]}}
+              ]
+          }
+       },
+
+        "Redissg": {
+            "Type": "AWS::EC2::SecurityGroup",
+            "Properties": {
+                "GroupDescription": "Redis Security Group Configuration",
+                "VpcId": { "Ref": "VpcID" },
+                "SecurityGroupIngress": [
+                        {
+                        "IpProtocol": "tcp",
+                        "FromPort": "6379",
+                        "ToPort": "6379",
+                        "SourceSecurityGroupId":{"Ref": "Appsg"}
+                        },
+                        {
+                        "IpProtocol": "tcp",
+                        "FromPort": "6379",
+                        "ToPort": "6379",
+                        "SourceSecurityGroupId":{"Ref": "Perrysg"}
+                        }
+                ],
+                "Tags" :  [
+                    {"Key": "Environment", "Value": {"Ref": "EnvName"}},
+                    {"Key": "Role", "Value": "security-groups"},
+                    {"Key": "Name", "Value":  { "Fn::Join": ["",[{"Ref": "EnvName"},"-","redis-sg"]]}}
+
+                ]
+            }
+        }
+
+    },
+    "Outputs": {
+
+        "WebProxyGatewaySg": {
+                "Description": "Web-Proxy Gateway security Group",
+	  	    	"Value": { "Ref": "WebProxyGatewaySg"},
+                "Export": { "Name": { "Fn::Join": ["",[{"Ref": "EnvName"},"-","WebProxyGatewaySg"]]}}
+        },
+        "WebProxyGatewaySg2": {
+                "Description": "Web-Proxy Gateway dummy security Group to avoid circular dependency",
+	  	    	"Value": { "Ref": "WebProxyGatewaySg2"},
+                "Export": { "Name": { "Fn::Join": ["",[{"Ref": "EnvName"},"-","WebProxyGatewaySg2"]]}}
+        },
+        "WebGatewayElbSg": {
+            "Description": "WebProxy Gateway Load Balancer Security Group",
+	  	    "Value": { "Ref": "WebGatewayElbSg"},
+            "Export": { "Name": { "Fn::Join": ["",[{"Ref": "EnvName"},"-","Web-ElbSg"]]}}
+        },
+        "ManagedServerRules": {
+                "Description":"Managed Server Rules (Common) security Group",
+	  	    	"Value": { "Ref": "ManagedServerRules"},
+                "Export": { "Name": { "Fn::Join": ["",[{"Ref": "EnvName"},"-","ManagedServerRules"]]}}
+        },
+        "WebAppsg": {
+                "Description":"Web App security Group", 
+	  	    	"Value": { "Ref": "WebAppsg"},
+                "Export": { "Name": { "Fn::Join": ["",[{"Ref": "EnvName"},"-","WebAppsg"]]}}
+        },
+        "Appsg": {
+                "Description":"App security Group UI intake/cals/dashboard",
+	  	    	"Value": { "Ref": "Appsg"},
+                "Export": { "Name": { "Fn::Join": ["",[{"Ref": "EnvName"},"-","Appsg"]]}}  
+        },
+        "Perrysg":{
+                "Description":"Perry security Group",
+                "Value": {"Ref":"Perrysg"},
+                "Export": { "Name": { "Fn::Join": ["",[{"Ref": "EnvName"},"-","Perrysg"]]}}
+        },
+        "IDPsg":{
+                "Description":"IDP security Group",
+                "Value": {"Ref":"IDPsg"},
+                "Export": { "Name": { "Fn::Join": ["",[{"Ref": "EnvName"},"-","IDPsg"]]}}
+        },
+        "WebPerryExternalsg": {
+                "Description":"Web Perry External security Group",
+                "Value":{"Ref":"WebPerryExternalsg"},
+                "Export": { "Name": { "Fn::Join": ["",[{"Ref": "EnvName"},"-","WebPerryExternalsg"]]}}
+        },
+        "Apisg":{
+                "Description":" Api  security Group (ferb/dora/intake/cals)",
+                "Value": {"Ref":"Apisg"},
+                "Export": { "Name": { "Fn::Join": ["",[{"Ref": "EnvName"},"-","Apisg"]]}}
+        },
+        "WebApisg":{
+                "Description":"Api  Loadbalancer security Group (ferb/dora/intake/cals)",
+                "Value": {"Ref":"WebApisg"},
+                "Export": { "Name": { "Fn::Join": ["",[{"Ref": "EnvName"},"-","WebApisg"]]}}
+        },
+        "WebApisg2": {
+                "Description":"Web API security Group",
+	  	    	"Value": { "Ref": "WebApisg2"},
+                "Export": { "Name": { "Fn::Join": ["",[{"Ref": "EnvName"},"-","WebApisg2"]]}}
+        },
+        "JenkinsSg": {
+                "Description":"Jenkins security Group",
+	  	    	"Value": { "Ref": "JenkinsSg"},
+                "Export": { "Name": { "Fn::Join": ["",[{"Ref": "EnvName"},"-","JenkinsSg"]]}}
+        },
+        "Rundecksg": {
+                "Description":"Run Deck security Group",
+	  	    	"Value": { "Ref": "Rundecksg"},
+                "Export": { "Name": { "Fn::Join": ["",[{"Ref": "EnvName"},"-","Rundecksg"]]}}
+        },
+        "elasticsearchsg": {
+                "Description":"Elastic Search security Group",
+	  	    	"Value": { "Ref": "elasticsearchsg"},
+                "Export": { "Name": { "Fn::Join": ["",[{"Ref": "EnvName"},"-","elasticsearchsg"]]}}
+         },
+        "proxydb2sg": {
+                "Description":"db2 sg that points to proxy servers for db2 connection",
+	  	    	"Value": { "Ref": "proxydb2sg"},
+                "Export": { "Name": { "Fn::Join": ["",[{"Ref": "EnvName"},"-","proxydb2sg"]]}}
+         },
+         "db2sg": {
+                "Description":"db2 docker sg",
+	  	    	"Value": { "Ref": "db2sg"},
+                "Export": { "Name": { "Fn::Join": ["",[{"Ref": "EnvName"},"-","db2sg"]]}}
+         },
+        "postgressg": {
+                "Description":"postgres security Group",
+	  	    	"Value": { "Ref": "postgressg"},
+                "Export": { "Name": { "Fn::Join": ["",[{"Ref": "EnvName"},"-","postgressg"]]}}
+        },
+        "Calspgsg": {
+                "Description":"postgres security Group",
+	  	    	"Value": { "Ref": "Calspgsg"},
+                "Export": { "Name": { "Fn::Join": ["",[{"Ref": "EnvName"},"-","Calspgsg"]]}}
+        },
+        "Redissg":{
+                "Description":"Redis security Group",
+                "Value": {"Ref":"Redissg"},
+                "Export": { "Name": { "Fn::Join": ["",[{"Ref": "EnvName"},"-","Redissg"]]}}
+        },
+        "NessusScannerSg": {
+            "Description":"Nessus pre-authorized server security Group",
+	  	    "Value": { "Ref": "NessusScannerSg"},
+            "Export": { "Name": { "Fn::Join": ["",[{"Ref": "EnvName"},"-","NessusScannerSg"]]}}
+        }                
+    }
+}
