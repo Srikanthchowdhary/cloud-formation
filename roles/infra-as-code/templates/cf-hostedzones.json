@@ -1,0 +1,717 @@
+
+{
+    "AWSTemplateFormatVersion": "2010-09-09",
+    "Description": "Route 53 Configuration",
+    "Metadata": {
+        "About": {
+            "Author": {"value": "DevOps Engineering Team"},
+            "Contact": {"Value": "cwdsdevopsengineering@osi.ca.gov"},
+            "CreatedDate": {"Value": "May 22, 2018"},
+            "UpdatedDate": {"Value": "{{ansible_date_time.date}}"}
+        }
+    },
+    "Parameters": {
+        "EnvName": {
+            "Description": "Environment Name",
+            "Type": "String"
+        },
+        "HostedZoneName": {
+            "Description": "HostedZone Name",
+            "Type": "String"
+        },
+        "EnvironmentType": {
+            "Description": "Condition for docker or non docker environment",
+            "Type": "String"
+        },
+        "idpdeploy": {
+            "Description": "condition to create idp ",
+            "Type": "String"
+        },
+        "cmapideploy": {
+            "Description": "condition to create case-management api servers",
+            "Type": "String"
+        },
+        "cansdeploy": {
+            "Description": "condition to create cans servers",
+            "Type": "String"
+        },
+        "formsapideploy": {
+            "Description": "condition to create forms api servers",
+            "Type": "String"
+        },
+        "perry3node": {
+            "Description": "condition to create perry 3rd node",
+            "Type": "String"
+        },
+        "PostgresEndPoint": {
+            "Description": "Postgres RDS Endpoint",
+            "Type": "String"
+        },
+        "DB2A": {
+            "Description": "Docker db2 server Private Ip",
+            "Type": "String"
+        },
+        "PostgreSQLA": {
+            "Description": "S2S s2s server Private Ip",
+            "Type": "String"
+        },
+        "InternalWebGatewayA": {
+            "Description": "WebGateway Server Instance Ip",
+            "Type": "String"
+        },
+        "InternalWebGatewayC": {
+            "Description": "WebGateway Server Instance Ip",
+            "Type": "String"
+        },
+        "ELBWebgateway": {
+            "Description": "WebGateway LoadBalancer DNS name",
+            "Type": "String"
+        },
+        "AppServerA": {
+            "Description": "App Server (Intake/Cals) Instance Ip",
+            "Type": "String"
+        },
+        "AppServerC": {
+            "Description": "Intake Server (Intake/Cals) Instance Ip",
+            "Type": "String"
+        },
+        "ElbIntake": {
+            "Description": "Intake loadbalancer DNS name",
+            "Type": "String"
+        },
+        "ElbCals": {
+            "Description": "Cals loadbalancer DNS name",
+            "Type": "String"
+        },
+        "ElbCans": {
+            "Description": "Cans loadbalancer DNS name",
+            "Type": "String"
+        },
+        "ElbCase": {
+          "Description": "Case MNG loadbalancer DNS name",
+          "Type": "String"
+        },
+        "ElbCmapi": {
+          "Description": "Case-management-api loadbalancer DNS name",
+          "Type": "String"
+        },
+        "ElbIDP": {
+            "Description": "IDP loadbalancer DNS name",
+            "Type": "String"
+        },
+        "ElbDashboard": {
+            "Description": "Dashboard loadbalancer DNS name",
+            "Type": "String"
+        },
+        "ElbCap": {
+            "Description": "Cap load balancer DNS name",
+            "Type": "String"
+        },
+        "nuxeoELB": {
+            "Description": "nuxeo loadbalancer DNS name",
+            "Type": "String"
+        },
+        "formsapiELB": {
+            "Description": "forms-api loadbalancer DNS name",
+            "Type": "String"
+        },
+        "dmsELB": {
+            "Description": "dms loadbalancer DNS name",
+            "Type": "String"
+        },
+        "PerryServerA": {
+            "Description": "Perry Server Instance Ip",
+            "Type": "String"
+        },
+        "PerryServer2A": {
+            "Description": "Perry Server Instance Ip",
+            "Type": "String"
+        },
+        "PerryServerC": {
+            "Description": "Perry Server Instance Ip",
+            "Type": "String"
+        },
+        "ElbExternalPerry": {
+            "Description": "Perry loadbalancer DNS name",
+            "Type": "String"
+        },
+        "ApiServerA": {
+            "Description": "API Server (Intake/Cals) Instance Ip",
+            "Type": "String"
+        },
+        "ApiServerC": {
+            "Description": "API Server (Intake/Cals) Instance Ip",
+            "Type": "String"
+        },
+        "ElbCalsApi": {
+            "Description": "Cals API loadbalancer DNS name",
+            "Type": "String"
+        },
+        "ElbGeoApi": {
+            "Description": "Geo API loadbalancer DNS name",
+            "Type": "String"
+        },
+        "ElbFerbApi": {
+            "Description": "Ferb API loadbalancer DNS name",
+            "Type": "String"
+        },
+        "ElbDoraApi": {
+            "Description": "Dora API loadbalancer DNS name",
+            "Type": "String"
+        },
+        "ElbCansApi": {
+            "Description": "Cans API loadbalancer DNS name",
+            "Type": "String"
+        },
+        "Jenkins": {
+            "Description": "Jenkins Slave Server Private IP",
+            "Type": "String"            
+        },
+        "RundeckServerA": {
+            "Description": "Rundeck Server Private IP",
+            "Type": "String"           
+        },
+        "ElasticSearch": {
+            "Description": "Elastic Search Private Ip",
+            "Type": "String"
+        },
+        "RedisElastiCachePrimaryEndPoint": {
+            "Description": "Redis Elasticcache Endpoint",
+            "Type": "String"
+        },
+        "createES1node": {
+            "Description": "Condition to create single node ES",
+            "Type": "String"
+      }
+    },
+    "Conditions": {
+        "create-PostgresRDS": {"Fn::Equals": [{"Ref": "EnvironmentType"}, "nondocker"]},
+        "create-docker-db": {"Fn::Equals": [{"Ref": "EnvironmentType"}, "docker"]},
+        "idpdeploy": {"Fn::Equals": [{"Ref": "idpdeploy"}, "true"]},
+        "cmapideploy": {"Fn::Equals": [{"Ref": "cmapideploy"}, "true"]},
+        "formsapideploy": {"Fn::Equals": [{"Ref": "formsapideploy"}, "true"]},
+        "createES1node": {"Fn::Equals": [{"Ref": "createES1node"}, "true"]},
+        "cansdeploy": {"Fn::Equals": [{"Ref": "cansdeploy"}, "true"]},
+        "perry3node": {"Fn::Equals": [{"Ref": "perry3node"}, "true"]}
+    },
+
+    "Resources": {
+
+        "WebGatewayARoute53RS": {
+            "Type": "AWS::Route53::RecordSet",
+            "Properties": {
+                "Name": { "Fn::Join": ["",["web-a",".",{"Ref": "EnvName"},".",{"Ref": "HostedZoneName"}]]}, 
+                "Type": "A",
+                "Comment": "WebGateway Server AZ us-west-1a Recordset",
+                "HostedZoneName": { "Fn::Join": ["",[{"Ref": "HostedZoneName"},"."]]},
+                "ResourceRecords": [ {"Ref": "InternalWebGatewayA"} ],
+                "TTL": "60"
+            }
+        },
+        "WebGatewayCRoute53RS": {
+            "Type": "AWS::Route53::RecordSet",
+            "Properties": {
+                "Name": { "Fn::Join": ["",["web-c",".",{"Ref": "EnvName"},".",{"Ref": "HostedZoneName"}]]}, 
+                "Type": "A",
+                "Comment": "WebGateway Server AZ us-west-1c Recordset",
+                "HostedZoneName": { "Fn::Join": ["",[{"Ref": "HostedZoneName"},"."]]},
+                "ResourceRecords": [ {"Ref": "InternalWebGatewayC"} ],
+                "TTL": "60"
+            }
+        },
+        "WebGatewayRoute53RS": {
+            "Type": "AWS::Route53::RecordSet",
+            "Properties": {
+                "Name": { "Fn::Join": ["",["web",".",{"Ref": "EnvName"},".",{"Ref": "HostedZoneName"}]]},
+                "Type": "CNAME",
+                "Comment": "Webgateway elb recordset",
+                "HostedZoneName": { "Fn::Join": ["",[{"Ref": "HostedZoneName"},"."]]},
+                "ResourceRecords": [ {"Ref": "ELBWebgateway"} ],
+                "TTL": "60"
+            }
+        },
+        "IDPRoute53RS": {
+            "Type": "AWS::Route53::RecordSet",
+            "Condition": "idpdeploy",
+            "Properties": {
+                "Name": { "Fn::Join": ["",["idp",".",{"Ref": "EnvName"},".",{"Ref": "HostedZoneName"}]]},
+                "Type": "CNAME",
+                "Comment": "IDP elb recordset",
+                "HostedZoneName": { "Fn::Join": ["",[{"Ref": "HostedZoneName"},"."]]},
+                "ResourceRecords": [ {"Ref": "ElbIDP"} ],
+                "TTL": "60"
+            }
+        },
+        "AppServerARoute53RS": {
+            "Type": "AWS::Route53::RecordSet",
+            "Properties": {
+                "Name": { "Fn::Join": ["",["app-a",".",{"Ref": "EnvName"},".",{"Ref": "HostedZoneName"}]]}, 
+                "Type": "A",
+                "Comment": "App Server (Cals/Intake) AZ us-west-1a Recordset",
+                "HostedZoneName": { "Fn::Join": ["",[{"Ref": "HostedZoneName"},"."]]},
+                "ResourceRecords": [ {"Ref": "AppServerA"} ],
+                "TTL": "60"
+            }
+        },
+        "AppServerCRoute53RS": {
+            "Type": "AWS::Route53::RecordSet",
+            "Properties": {
+                "Name": { "Fn::Join": ["",["app-c",".",{"Ref": "EnvName"},".",{"Ref": "HostedZoneName"}]]}, 
+                "Type": "A",
+                "Comment": "Intake Server (Cals/Intake) AZ us-west-1c Recordset",
+                "HostedZoneName": { "Fn::Join": ["",[{"Ref": "HostedZoneName"},"."]]},
+                "ResourceRecords": [ {"Ref": "AppServerC"} ],
+                "TTL": "60"
+            }
+        },
+        "ElbIntakeAppRoute53RS": {
+            "Type": "AWS::Route53::RecordSet",
+            "Properties": {
+                "Name": { "Fn::Join": ["",["intake",".",{"Ref": "EnvName"},".",{"Ref": "HostedZoneName"}]]},
+                "Type": "CNAME",
+                "Comment": "Intake elb recordset",
+                "HostedZoneName": { "Fn::Join": ["",[{"Ref": "HostedZoneName"},"."]]},
+                "ResourceRecords": [ {"Ref": "ElbIntake"} ],
+                "TTL": "60"
+            }
+        },
+        "ElbCalsAppRoute53RS": {
+            "Type": "AWS::Route53::RecordSet",
+            "Properties": {
+                "Name": { "Fn::Join": ["",["cals",".",{"Ref": "EnvName"},".",{"Ref": "HostedZoneName"}]]},
+                "Type": "CNAME",
+                "Comment": "Intake elb recordset",
+                "HostedZoneName": { "Fn::Join": ["",[{"Ref": "HostedZoneName"},"."]]},
+                "ResourceRecords": [ {"Ref": "ElbCals"} ],
+                "TTL": "60"
+            }
+        },
+        "ElbCaseMNGAppRoute53RS": {
+          "Type": "AWS::Route53::RecordSet",
+          "Condition": "cmapideploy",
+          "Properties": {
+            "Name": { "Fn::Join": ["",["casemng",".",{"Ref": "EnvName"},".",{"Ref": "HostedZoneName"}]]},
+            "Type": "CNAME",
+            "Comment": "CaseMNG elb recordset",
+            "HostedZoneName": { "Fn::Join": ["",[{"Ref": "HostedZoneName"},"."]]},
+            "ResourceRecords": [ {"Ref": "ElbCase"} ],
+            "TTL": "60"
+          }
+        },
+        "ElbCasemgmtapiRoute53RS": {
+          "Type": "AWS::Route53::RecordSet",
+          "Condition": "cmapideploy",
+          "Properties": {
+            "Name": { "Fn::Join": ["",["case-mgmt-api",".",{"Ref": "EnvName"},".",{"Ref": "HostedZoneName"}]]},
+            "Type": "CNAME",
+            "Comment": "Casemgmtapi elb recordset",
+            "HostedZoneName": { "Fn::Join": ["",[{"Ref": "HostedZoneName"},"."]]},
+            "ResourceRecords": [ {"Ref": "ElbCmapi"} ],
+            "TTL": "60"
+          }
+        },
+        "ElbDashboardRoute53RS": {
+            "Type": "AWS::Route53::RecordSet",
+            "Properties": {
+                "Name": { "Fn::Join": ["",["dashboard",".",{"Ref": "EnvName"},".",{"Ref": "HostedZoneName"}]]},
+                "Type": "CNAME",
+                "Comment": "Dashboard elb recordset",
+                "HostedZoneName": { "Fn::Join": ["",[{"Ref": "HostedZoneName"},"."]]},
+                "ResourceRecords": [ {"Ref": "ElbDashboard"} ],
+                "TTL": "60"
+            }
+        },
+        "ElbCapRoute53RS": {
+            "Type": "AWS::Route53::RecordSet",
+            "Properties": {
+                "Name": { "Fn::Join": ["",["cap",".",{"Ref": "EnvName"},".",{"Ref": "HostedZoneName"}]]},
+                "Type": "CNAME",
+                "Comment": "County admin page elb recordset",
+                "HostedZoneName": { "Fn::Join": ["",[{"Ref": "HostedZoneName"},"."]]},
+                "ResourceRecords": [ {"Ref": "ElbCap"} ],
+                "TTL": "60"
+            }
+        },
+        "ElbCansRoute53RS": {
+            "Type": "AWS::Route53::RecordSet",
+            "Condition": "cansdeploy",
+            "Properties": {
+                "Name": { "Fn::Join": ["",["cans",".",{"Ref": "EnvName"},".",{"Ref": "HostedZoneName"}]]},
+                "Type": "CNAME",
+                "Comment": "Cans APP elb recordset",
+                "HostedZoneName": { "Fn::Join": ["",[{"Ref": "HostedZoneName"},"."]]},
+                "ResourceRecords": [ {"Ref": "ElbCans"} ],
+                "TTL": "60"
+            }
+        },
+        "nuxeoELBRoute53RS": {
+            "Type": "AWS::Route53::RecordSet",
+            "Properties": {
+                "Name": { "Fn::Join": ["",["nuxeo",".",{"Ref": "EnvName"},".",{"Ref": "HostedZoneName"}]]},
+                "Type": "CNAME",
+                "Comment": "Dashboard elb recordset",
+                "HostedZoneName": { "Fn::Join": ["",[{"Ref": "HostedZoneName"},"."]]},
+                "ResourceRecords": [ {"Ref": "nuxeoELB"} ],
+                "TTL": "60"
+            }
+        },
+        "dmsELBRoute53RS": {
+            "Type": "AWS::Route53::RecordSet",
+            "Properties": {
+                "Name": { "Fn::Join": ["",["dms",".",{"Ref": "EnvName"},".",{"Ref": "HostedZoneName"}]]},
+                "Type": "CNAME",
+                "Comment": "DMS elb recordset",
+                "HostedZoneName": { "Fn::Join": ["",[{"Ref": "HostedZoneName"},"."]]},
+                "ResourceRecords": [ {"Ref": "dmsELB"} ],
+                "TTL": "60"
+            }
+        },
+        "PerryARoute53RS": {
+            "Type": "AWS::Route53::RecordSet",
+            "Properties": {
+                "Name": { "Fn::Join": ["",["perry-a",".",{"Ref": "EnvName"},".",{"Ref": "HostedZoneName"}]]}, 
+                "Type": "A",
+                "Comment": "Perry Server AZ us-west-1a Recordset",
+                "HostedZoneName": { "Fn::Join": ["",[{"Ref": "HostedZoneName"},"."]]},
+                "ResourceRecords": [ {"Ref": "PerryServerA"} ],
+                "TTL": "60"
+            }
+        },
+        "Perry2ARoute53RS": {
+            "Type": "AWS::Route53::RecordSet",
+            "Condition": "perry3node",
+            "Properties": {
+                "Name": { "Fn::Join": ["",["perry-2a",".",{"Ref": "EnvName"},".",{"Ref": "HostedZoneName"}]]}, 
+                "Type": "A",
+                "Comment": "Perry Server AZ us-west-1a Recordset",
+                "HostedZoneName": { "Fn::Join": ["",[{"Ref": "HostedZoneName"},"."]]},
+                "ResourceRecords": [ {"Ref": "PerryServer2A"} ],
+                "TTL": "60"
+            }
+        },
+        "PerryCRoute53RS": {
+            "Type": "AWS::Route53::RecordSet",
+            "Properties": {
+                "Name": { "Fn::Join": ["",["perry-c",".",{"Ref": "EnvName"},".",{"Ref": "HostedZoneName"}]]}, 
+                "Type": "A",
+                "Comment": "Perry Server AZ us-west-1c Recordset",
+                "HostedZoneName": { "Fn::Join": ["",[{"Ref": "HostedZoneName"},"."]]},
+                "ResourceRecords": [ {"Ref": "PerryServerC"} ],
+                "TTL": "60"
+            }
+        },
+        "ElbExternalPerryRoute53RS": {
+            "Type": "AWS::Route53::RecordSet",
+            "Properties": {
+                "Name": { "Fn::Join": ["",["perry",".",{"Ref": "EnvName"},".",{"Ref": "HostedZoneName"}]]},
+                "Type": "CNAME",
+                "Comment": "perry elb recordset",
+                "HostedZoneName": { "Fn::Join": ["",[{"Ref": "HostedZoneName"},"."]]},
+                "ResourceRecords": [ {"Ref": "ElbExternalPerry"} ],
+                "TTL": "60"
+            }
+        },
+        "ApiServerARoute53RS": {
+            "Type": "AWS::Route53::RecordSet",
+            "Properties": {
+                "Name": { "Fn::Join": ["",["api-a",".",{"Ref": "EnvName"},".",{"Ref": "HostedZoneName"}]]}, 
+                "Type": "A",
+                "Comment": "Api Server AZ us-west-1a Recordset",
+                "HostedZoneName": { "Fn::Join": ["",[{"Ref": "HostedZoneName"},"."]]},
+                "ResourceRecords": [ {"Ref": "ApiServerA"} ],
+                "TTL": "60"
+            }
+        },
+        "ApiServerCRoute53RS": {
+            "Type": "AWS::Route53::RecordSet",
+            "Properties": {
+                "Name": { "Fn::Join": ["",["api-c",".",{"Ref": "EnvName"},".",{"Ref": "HostedZoneName"}]]}, 
+                "Type": "A",
+                "Comment": "Api Server AZ us-west-1c Recordset",
+                "HostedZoneName": { "Fn::Join": ["",[{"Ref": "HostedZoneName"},"."]]},
+                "ResourceRecords": [ {"Ref": "ApiServerC"} ],
+                "TTL": "60"
+            }
+        },
+        "ElbCalsApiRoute53RS": {
+            "Type": "AWS::Route53::RecordSet",
+            "Properties": {
+                "Name": { "Fn::Join": ["",["calsapi",".",{"Ref": "EnvName"},".",{"Ref": "HostedZoneName"}]]},
+                "Type": "CNAME",
+                "Comment": "Cals API elb recordset",
+                "HostedZoneName": { "Fn::Join": ["",[{"Ref": "HostedZoneName"},"."]]},
+                "ResourceRecords": [ {"Ref": "ElbCalsApi"} ],
+                "TTL": "60"
+            }
+        },
+        "ElbGeoApiRoute53RS": {
+            "Type": "AWS::Route53::RecordSet",
+            "Properties": {
+                "Name": { "Fn::Join": ["",["geo",".",{"Ref": "EnvName"},".",{"Ref": "HostedZoneName"}]]},
+                "Type": "CNAME",
+                "Comment": "Geo API elb recordset",
+                "HostedZoneName": { "Fn::Join": ["",[{"Ref": "HostedZoneName"},"."]]},
+                "ResourceRecords": [ {"Ref": "ElbGeoApi"} ],
+                "TTL": "60"
+            }
+        },
+        "ElbCansApiRoute53RS": {
+            "Type": "AWS::Route53::RecordSet",
+            "Condition": "cansdeploy",
+            "Properties": {
+                "Name": { "Fn::Join": ["",["cansapi",".",{"Ref": "EnvName"},".",{"Ref": "HostedZoneName"}]]},
+                "Type": "CNAME",
+                "Comment": "Cans API elb recordset",
+                "HostedZoneName": { "Fn::Join": ["",[{"Ref": "HostedZoneName"},"."]]},
+                "ResourceRecords": [ {"Ref": "ElbCansApi"} ],
+                "TTL": "60"
+            }
+        },
+        "ElbFerbApiRoute53RS": {
+            "Type": "AWS::Route53::RecordSet",
+            "Properties": {
+                "Name": { "Fn::Join": ["",["ferbapi",".",{"Ref": "EnvName"},".",{"Ref": "HostedZoneName"}]]},
+                "Type": "CNAME",
+                "Comment": "Ferb API elb recordset",
+                "HostedZoneName": { "Fn::Join": ["",[{"Ref": "HostedZoneName"},"."]]},
+                "ResourceRecords": [ {"Ref": "ElbFerbApi"} ],
+                "TTL": "60"
+            }
+        },
+        "ElbDoraApiRoute53RS": {
+            "Type": "AWS::Route53::RecordSet",
+            "Properties": {
+                "Name": { "Fn::Join": ["",["doraapi",".",{"Ref": "EnvName"},".",{"Ref": "HostedZoneName"}]]},
+                "Type": "CNAME",
+                "Comment": "Dora API elb recordset",
+                "HostedZoneName": { "Fn::Join": ["",[{"Ref": "HostedZoneName"},"."]]},
+                "ResourceRecords": [ {"Ref": "ElbDoraApi"} ],
+                "TTL": "60"
+            }
+        },
+        "ElbFormsapiRoute53RS": {
+            "Type": "AWS::Route53::RecordSet",
+            "Condition": "formsapideploy",
+            "Properties": {
+                "Name": { "Fn::Join": ["",["formsapi",".",{"Ref": "EnvName"},".",{"Ref": "HostedZoneName"}]]},
+                "Type": "CNAME",
+                "Comment": "Forms API elb recordset",
+                "HostedZoneName": { "Fn::Join": ["",[{"Ref": "HostedZoneName"},"."]]},
+                "ResourceRecords": [ {"Ref": "formsapiELB"} ],
+                "TTL": "60"
+            }
+        },
+        "JenkinsRoute53RS": {
+            "Type": "AWS::Route53::RecordSet",
+            "Properties": {
+                "Name": { "Fn::Join": ["",["jenkins-slave",".",{"Ref": "EnvName"},".",{"Ref": "HostedZoneName"}]]}, 
+                "Type": "A",
+                "Comment": "Jenkins Slave Server Recordset",
+                "HostedZoneName": { "Fn::Join": ["",[{"Ref": "HostedZoneName"},"."]]},
+                "ResourceRecords": [ {"Ref": "Jenkins"} ],
+                "TTL": "60"
+            }
+        },
+        "RundeckRoute53RS": {
+            "Type": "AWS::Route53::RecordSet",
+            "Properties": {
+                "Name": { "Fn::Join": ["",["rundeck",".",{"Ref": "EnvName"},".",{"Ref": "HostedZoneName"}]]}, 
+                "Type": "A",
+                "Comment": "Rundeck Server Recordset",
+                "HostedZoneName": { "Fn::Join": ["",[{"Ref": "HostedZoneName"},"."]]},
+                "ResourceRecords": [ {"Ref": "RundeckServerA"} ],
+                "TTL": "60"
+            }
+        },
+        "PostgresRDSRoute53RS": {
+            "Type": "AWS::Route53::RecordSet",
+            "Condition": "create-PostgresRDS",
+            "Properties": {
+                "Name": { "Fn::Join": ["",["postgresql",".",{"Ref": "EnvName"},".",{"Ref": "HostedZoneName"}]]},
+                "Type": "CNAME",
+                "Comment": "Postgres RDS recordset",
+                "HostedZoneName": { "Fn::Join": ["",[{"Ref": "HostedZoneName"},"."]]},
+                "ResourceRecords": [ {"Ref": "PostgresEndPoint"} ],
+                "TTL": "60"
+            }
+        },
+        "DB2ARoute53RS": {
+            "Type": "AWS::Route53::RecordSet",
+            "Condition": "create-docker-db",
+            "Properties": {
+                "Name": { "Fn::Join": ["",["db2",".",{"Ref": "EnvName"},".",{"Ref": "HostedZoneName"}]]},
+                "Type": "A",
+                "Comment": "docker db2 recordset",
+                "HostedZoneName": { "Fn::Join": ["",[{"Ref": "HostedZoneName"},"."]]},
+                "ResourceRecords": [ {"Ref": "DB2A"} ],
+                "TTL": "60"
+            }
+        },
+        "PostgresRoute53RS": {
+            "Type": "AWS::Route53::RecordSet",
+            "Condition": "create-docker-db",
+            "Properties": {
+                "Name": { "Fn::Join": ["",["postgres",".",{"Ref": "EnvName"},".",{"Ref": "HostedZoneName"}]]},
+                "Type": "A",
+                "Comment": "Postgres Docker db2 recordset",
+                "HostedZoneName": { "Fn::Join": ["",[{"Ref": "HostedZoneName"},"."]]},
+                "ResourceRecords": [ {"Ref": "PostgreSQLA"} ],
+                "TTL": "60"
+            }
+        },
+        "ElasticSearchRoute53RS": {
+            "Type": "AWS::Route53::RecordSet",
+            "Condition": "createES1node",
+            "Properties": {
+                "Name": { "Fn::Join": ["",["elasticsearch",".",{"Ref": "EnvName"},".",{"Ref": "HostedZoneName"}]]}, 
+                "Type": "A",
+                "Comment": "elastic search Server Recordset",
+                "HostedZoneName": { "Fn::Join": ["",[{"Ref": "HostedZoneName"},"."]]},
+                "ResourceRecords": [ {"Ref": "ElasticSearch"} ],
+                "TTL": "60"
+            }
+        },
+        "RedisElastiCacheRoute53RS" : {
+            "Type": "AWS::Route53::RecordSet",
+            "Properties": {
+                "Name": { "Fn::Join": ["",["redis",".",{"Ref": "EnvName"},".",{"Ref": "HostedZoneName"}]]},
+                "Type": "CNAME",
+                "Comment": "Redis recordset",
+                "HostedZoneName": { "Fn::Join": ["",[{"Ref": "HostedZoneName"},"."]]},
+                "ResourceRecords": [ {"Ref": "RedisElastiCachePrimaryEndPoint"} ],
+                "TTL": "60"
+            }
+        }
+        
+    },
+    "Outputs": {
+        "WebGatewayARoute53RS": {
+            "Description": "WebGateway Server-A DNS name ",
+            "Value": {"Ref": "WebGatewayARoute53RS"}
+        },
+        "WebGatewayCRoute53RS": {
+            "Description": "WebGateway Server-C DNS name ",
+            "Value": {"Ref": "WebGatewayCRoute53RS"}
+        },
+        "WebGatewayRoute53RS": {
+            "Description": "WebGateway elb DNS name ",
+            "Value": {"Ref": "WebGatewayRoute53RS"}
+        },
+        "AppServerARoute53RS": {
+            "Description": "App Server-A DNS name ",
+            "Value": {"Ref": "AppServerARoute53RS"}
+        },
+        "AppServerCRoute53RS": {
+            "Description": "App Server-C DNS name ",
+            "Value": {"Ref": "AppServerCRoute53RS"}
+        },
+        "ElbIntakeAppRoute53RS": {
+            "Description": "Intake APP elb DNS name ",
+            "Value": {"Ref": "ElbIntakeAppRoute53RS"}
+        },
+        "ElbCalsAppRoute53RS": {
+            "Description": "Cals APP elb DNS name ",
+            "Value": {"Ref": "ElbCalsAppRoute53RS"}
+        },
+        "ElbDashboardRoute53RS": {
+            "Description": "DashBoard APP elb DNS name ",
+            "Value": {"Ref": "ElbDashboardRoute53RS"}
+        },
+        "ElbCapRoute53RS": {
+            "Description": "County admin page (CAP) elb DNS name ",
+            "Value": {"Ref": "ElbCapRoute53RS"}
+        },
+        "ElbCansRoute53RS": {
+            "Description": "Elastic Search DNS name ",
+            "Value": {"Fn::If": ["cansdeploy", {"Ref": "ElbCansRoute53RS"},"NoValue"]}
+        },
+        "nuxeoELBRoute53RS": {
+            "Description": "Nuxeo APP elb DNS name ",
+            "Value": {"Ref": "nuxeoELBRoute53RS"}
+        },
+        "dmsELBRoute53RS": {
+            "Description": "dms APP elb DNS name ",
+            "Value": {"Ref": "dmsELBRoute53RS"}
+        },
+        "PerryARoute53RS": {
+            "Description": "Perry Server DNS name ",
+            "Value": {"Ref": "PerryARoute53RS"}
+        },
+        "Perry2ARoute53RS": {
+            "Description": "Perry Server DNS name ",
+            "Value": {"Fn::If": ["perry3node",{"Ref": "Perry2ARoute53RS"},"NoValue"]}
+        },
+        "PerryCRoute53RS": {
+            "Description": "Perry Server DNS name ",
+            "Value": {"Ref": "PerryCRoute53RS"}
+        },
+        "ElbExternalPerryRoute53RS": {
+            "Description": "Perry elb DNS name ",
+            "Value": {"Ref": "ElbExternalPerryRoute53RS"}
+        },
+        "ApiServerARoute53RS": {
+            "Description": "Api Server-A DNS name ",
+            "Value": {"Ref": "ApiServerARoute53RS"}
+        },
+        "ApiServerCRoute53RS": {
+            "Description": "Api Server-C DNS name ",
+            "Value": {"Ref": "ApiServerCRoute53RS"}
+        },
+        "ElbCalsApiRoute53RS": {
+            "Description": "Cals Api elb DNS name ",
+            "Value": {"Ref": "ElbCalsApiRoute53RS"}
+        },
+        "ElbCaseMNGRoute53RS": {
+          "Description": "Case MNG elb DNS name ",
+          "Value": {"Fn::If": ["cmapideploy",{"Ref": "ElbCaseMNGAppRoute53RS"},"NoValue"]}
+        },
+        "ElbCasemgmtapiRoute53RS": {
+          "Description": "Casemgmtapi elb DNS name ",
+          "Value": {"Fn::If": ["cmapideploy",{"Ref": "ElbCasemgmtapiRoute53RS"},"NoValue"]}
+        },
+        "ElbCansApiRoute53RS": {
+            "Description": "Elastic Search DNS name ",
+            "Value": {"Fn::If": ["cansdeploy", {"Ref": "ElbCansApiRoute53RS"},"NoValue"]}
+        },
+        "ElbFerbApiRoute53RS": {
+            "Description": "Ferb Api elb DNS name ",
+            "Value": {"Ref": "ElbFerbApiRoute53RS"}
+        },
+        "ElbDoraApiRoute53RS": {
+            "Description": "Dora Api elb DNS name ",
+            "Value": {"Ref": "ElbDoraApiRoute53RS"}
+        },
+        "ElbFormsapiRoute53RS": {
+            "Description": "Forms Api elb DNS name ",
+            "Value": {"Fn::If": ["formsapideploy",{"Ref": "ElbFormsapiRoute53RS"},"NoValue" ]}   
+        },
+        "JenkinsRoute53RS": {
+            "Description": "Jenkins-slave server DNS name ",
+            "Value": {"Ref": "JenkinsRoute53RS"}
+        },
+        "RundeckRoute53RS": {
+            "Description": "Rundeck server DNS name ",
+            "Value": {"Ref": "RundeckRoute53RS"}
+        },
+        "PostgresRDSRoute53RS": {
+            "Description": "postgresql RDS server DNS name ",
+            "Value": {"Fn::If": ["create-PostgresRDS",{"Ref": "PostgresRDSRoute53RS"},"NoValue" ]} 
+        },
+        "DB2ARoute53RS": {    
+            "Description": "db2 server DNS name ",
+            "Value": {"Fn::If": ["create-docker-db",{"Ref": "DB2ARoute53RS"},"NoValue" ]}
+        },
+        "PostgresRoute53RS": {
+            "Description": "docker-postgres server DNS name ",
+            "Value": {"Fn::If": ["create-docker-db",{"Ref": "PostgresRoute53RS"},"NoValue" ]}
+        },
+        "ElasticSearchRoute53RS": {
+            "Description": "Elastic Search DNS name ",
+            "Value": {"Fn::If": ["createES1node", {"Ref": "ElasticSearchRoute53RS"},"NoValue"]}
+        },
+        "RedisElastiCacheRoute53RS": {
+            "Description": "Redis DNS name ",
+            "Value": {"Ref": "RedisElastiCacheRoute53RS"}
+        }
+    }
+}

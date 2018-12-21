@@ -1,0 +1,349 @@
+{
+    "AWSTemplateFormatVersion": "2010-09-09",
+    "Description": "Nested Stack",
+    "Metadata": {
+         "About": {
+            "Author": {"value": "DevOps Engineering Team"},
+            "Contact": {"Value": "cwdsdevopsengineering@osi.ca.gov"},
+            "CreatedDate": {"Value": "May 21, 2018"},
+            "UpdatedDate": {"Value": "{{ansible_date_time.date}}"}
+         }
+    },
+	"Parameters": {
+		"DBPassword": {
+			"Description": "Postgres Database admin account Password",
+            "NoEcho": "true",
+            "Type": "String",
+            "MinLength": "1",
+            "MaxLength": "20",
+            "ConstraintDescription": "Must Begin with a letter and contain only alphanumeric characters."
+		}
+    },
+	"Mappings":{
+		"CustomVariables": { 
+			"EnvName": {"Value": "{{env_name.stdout}}"},
+			"PatchGroups1": {"Value": "{{ hostvars[groups['stack'][0]]['PatchGroups1'] }}"},
+			"PatchGroups2": {"Value": "{{ hostvars[groups['stack'][0]]['PatchGroups2'] }}"},
+			"PatchGroups3": {"Value": "{{ hostvars[groups['stack'][0]]['PatchGroups3'] }}"},
+			"KeyName": {"Value": "{{ hostvars[groups['stack'][0]]['keyname'] }}"},
+            "RegionAZNameA": { "Value" : "{{ hostvars[groups['stack'][0]]['availabilityzoneA'] }}"},
+            "RegionAZNameC": { "Value" : "{{ hostvars[groups['stack'][0]]['availabilityzoneC'] }}"},
+			"VpcCidrBlock": {"Value": "{{ hostvars[groups['stack'][0]]['vpc_cidr'] }}"},
+			"PublicCidr2A": {"Value": "{{ hostvars[groups['stack'][0]]['public_cidr2a'] }}"},
+			"PublicCidr2C": {"Value": "{{ hostvars[groups['stack'][0]]['public_cidr2c'] }}"},
+			"PrivateCidr1A": {"Value": "{{ hostvars[groups['stack'][0]]['private_cidr1a'] }}"},
+			"PrivateCidr1C": {"Value": "{{ hostvars[groups['stack'][0]]['private_cidr1c'] }}"},
+			"PrivateCidr2A": {"Value": "{{ hostvars[groups['stack'][0]]['private_cidr2a'] }}"},
+			"PrivateCidr2C": {"Value": "{{ hostvars[groups['stack'][0]]['private_cidr2c'] }}"},
+			"PrivateCidr3A": {"Value": "{{ hostvars[groups['stack'][0]]['private_cidr3a'] }}"},				
+			"ImageID": {"Value": "{{ hostvars[groups['stack'][0]]['image_id'] }}"},
+			"NessusImageID": {"Value": "{{ hostvars[groups['stack'][0]]['nessus_image_id'] }}"},
+			"SSLCertificateId": {"Value": "{{ hostvars[groups['stack'][0]]['ssl_certificate_id'] }}"},
+			"InstanceType": {"Value": "{{ hostvars[groups['stack'][0]]['instancetype'] }}"},
+			"NessusInstanceType": {"Value": "{{ hostvars[groups['stack'][0]]['nessus_instancetype'] }}"},
+			"RundeckInstanceType": {"Value": "{{ hostvars[groups['stack'][0]]['rundeck_instancetype'] }}"},
+			"ElasticSearchInstanceType": {"Value": "{{ hostvars[groups['stack'][0]]['elasticsearch_instancetype'] }}"},
+			"DisableApiTermination": {"Value": "{{ hostvars[groups['stack'][0]]['disable_api_termination'] }}"},
+			"OpenVpnSg": {"Value": "{{ hostvars[groups['stack'][0]]['openvpn_sg'] }}"},
+			"TrendmicroSg": {"Value": "{{ hostvars[groups['stack'][0]]['trendmicro_sg'] }}"},
+			"SafCidr": {"Value": "{{ hostvars[groups['stack'][0]]['saf_cidr'] }}"},
+			"HostedZoneName": {"Value": "{{ hostvars[groups['stack'][0]]['hostedzone_name'] }}"}
+		},
+
+        "Conditions": {
+            "EnvironmentType": {"Value": "{{ hostvars[groups['stack'][0]]['environment_type'] }}"},
+			"idpdeploy": {"Value": "{{ hostvars[groups['stack'][0]]['idpdeploy'] }}"},
+			"cmapideploy": {"Value": "{{ hostvars[groups['stack'][0]]['cmapideploy'] }}"},
+			"formsapideploy": {"Value": "{{ hostvars[groups['stack'][0]]['formsapideploy'] }}"},
+			"createES1node": {"Value": "{{ hostvars[groups['stack'][0]]['elasticsearch_1node'] }}"},
+			"cansdeploy": {"Value": "{{ hostvars[groups['stack'][0]]['cansdeploy'] }}"},
+			"perry3node": {"Value": "{{ hostvars[groups['stack'][0]]['perry3node'] }}"}
+        },
+		"DbVariables": {
+			"PostgresRDS":{"Value":"{{ hostvars[groups['stack'][0]]['postgresrds'] }}"},
+			"PostgresReadReplica":{"Value":"{{ hostvars[groups['stack'][0]]['postgres_read_replica'] }}"},
+			"DBInstancetype": {"Value": "{{ hostvars[groups['stack'][0]]['dbinstance_type'] }}"},
+			"DBAllocatedStorage": {"Value": "{{ hostvars[groups['stack'][0]]['db_allocated_storage'] }}"},
+			"PostgresVersion": {"Value": "{{ hostvars[groups['stack'][0]]['PostgresVersion'] }}"},
+			"PostgresVersionUpgrade": {"Value": "{{ hostvars[groups['stack'][0]]['PostgresVersionUpgrade'] }}"},
+			"PostgresParameterGroup": {"Value": "{{ hostvars[groups['stack'][0]]['PostgresParameterGroup'] }}"},
+			"Iops": {"Value": "{{ hostvars[groups['stack'][0]]['iops'] }}"},
+			"DBUsername":{"Value":"{{ hostvars[groups['stack'][0]]['db_username'] }}"},
+			"DBName": {"Value": "{{ hostvars[groups['stack'][0]]['db_name'] }}"},
+			"ElasticSearchVolume": {"Value": "{{ hostvars[groups['stack'][0]]['elasticsearch_volume'] }}"},
+			"CacheNodeType": {"Value": "{{ hostvars[groups['stack'][0]]['cache_node_type'] }}"},
+			"RedisCacheClusters": {"Value": "{{ hostvars[groups['stack'][0]]['redis_cache_clusters'] }}"},
+			"RedisAutomaticFailoverEnabled": {"Value": "{{ hostvars[groups['stack'][0]]['redis_automatic_failover_enabled'] }}"}
+		}
+	},
+
+	"Resources": {
+		"VPC": {
+			"Type": "AWS::CloudFormation::Stack",
+			"Metadata":{ "Comment": "Creates and updates the VPC, Subnets, Routes, IGW, NAT and EIP for the Webgateway " },
+			"Properties": {
+				"TemplateURL": "https://cwds-cloudformation.s3.amazonaws.com/Environments/{{env_name.stdout}}/cf-{{env_name.stdout}}-vpc.json",
+				"TimeoutInMinutes": "10",
+				"Parameters": {
+					"EnvName": { "Fn::FindInMap": ["CustomVariables", "EnvName", "Value"]},
+					"RegionAZNameA": { "Fn::FindInMap": ["CustomVariables", "RegionAZNameA", "Value"]},
+					"RegionAZNameC": { "Fn::FindInMap": ["CustomVariables", "RegionAZNameC", "Value"]},
+					"VpcCidrBlock": { "Fn::FindInMap": ["CustomVariables", "VpcCidrBlock", "Value"]},
+					"PublicCidr2A": { "Fn::FindInMap": ["CustomVariables", "PublicCidr2A", "Value"]},
+					"PublicCidr2C": { "Fn::FindInMap": ["CustomVariables", "PublicCidr2C", "Value"]},
+					"PrivateCidr1A": { "Fn::FindInMap": ["CustomVariables", "PrivateCidr1A", "Value"]},
+					"PrivateCidr1C": { "Fn::FindInMap": ["CustomVariables", "PrivateCidr1C", "Value"]},
+					"PrivateCidr2A": { "Fn::FindInMap": ["CustomVariables", "PrivateCidr2A", "Value"]},
+					"PrivateCidr2C": { "Fn::FindInMap": ["CustomVariables", "PrivateCidr2C", "Value"]},
+					"PrivateCidr3A": { "Fn::FindInMap": ["CustomVariables", "PrivateCidr3A", "Value"]}
+				}
+			}
+		},
+		"VpcPeering":{
+			"Type": "AWS::CloudFormation::Stack",
+			"Metadata":{ "Comment": "Perrring connection Management-curret environment and proxy-current environment" },
+			"DependsOn": "VPC",
+			"Properties": {
+				"TemplateURL": "https://cwds-cloudformation.s3.amazonaws.com/Environments/{{env_name.stdout}}/cf-{{env_name.stdout}}-vpc-peering.json",
+				"TimeoutInMinutes": "10",
+				"Parameters": {
+					"EnvName": { "Fn::FindInMap": ["CustomVariables", "EnvName", "Value"]},
+					"VpcID": {"Fn::GetAtt": ["VPC", "Outputs.VpcID"]},
+					"VpcCidrBlock": { "Fn::FindInMap": ["CustomVariables", "VpcCidrBlock", "Value"]},
+					"RouteTable1": {"Fn::GetAtt": ["VPC", "Outputs.Route1"]},
+					"RouteTable2A": {"Fn::GetAtt": ["VPC", "Outputs.Route2A"]},
+					"RouteTable2C": {"Fn::GetAtt": ["VPC", "Outputs.Route2C"]},
+					"ManagementVpcId": {"Fn::ImportValue" : {"Fn::Sub" : "{{ hostvars[groups['stack'][0]]['management_vpc_id'] }}"}},
+					"ManagementVpcCidr": {"Fn::ImportValue" : {"Fn::Sub" : "{{ hostvars[groups['stack'][0]]['management_vpc_cidr'] }}"}},
+					"ManagementRoute1": {"Fn::ImportValue" : {"Fn::Sub" : "{{ hostvars[groups['stack'][0]]['management_vpc_route1'] }}"}},
+					"ManagementRoute2": {"Fn::ImportValue" : {"Fn::Sub" : "{{ hostvars[groups['stack'][0]]['management_vpc_route2'] }}"}},
+					"ProxyVpcId": {"Fn::ImportValue" : {"Fn::Sub" : "{{ hostvars[groups['stack'][0]]['proxy-network'] }}-VPC-ID"}},
+					"ProxyVpcCidr": {"Fn::ImportValue" : {"Fn::Sub" : "{{ hostvars[groups['stack'][0]]['proxy-network'] }}-CidrRange"}},
+					"ProxyRoute1": {"Fn::ImportValue" : {"Fn::Sub" : "{{ hostvars[groups['stack'][0]]['proxy-network'] }}-RouteTable1-ID"}},
+					"ProxyRoute2": {"Fn::ImportValue" : {"Fn::Sub" : "{{ hostvars[groups['stack'][0]]['proxy-network'] }}-RouteTable2-ID"}}
+				}
+			}
+		},
+		"SecurityGroups": {
+			"Type": "AWS::CloudFormation::Stack",
+			"Metadata":{ "Comment": "Creates and Updates all the Security Groups required for ec2-instances and databases" },
+			"DependsOn": "VpcPeering",
+			"Properties": {
+				"TemplateURL": "https://cwds-cloudformation.s3.amazonaws.com/Environments/{{env_name.stdout}}/cf-{{env_name.stdout}}-securitygroups.json",
+				"TimeoutInMinutes": "2",
+				"Parameters": {
+					"VpcID": {"Fn::GetAtt": ["VPC", "Outputs.VpcID"]},
+					"EnvName": { "Fn::FindInMap": ["CustomVariables", "EnvName", "Value"]},
+					"OpenVpnSg": { "Fn::FindInMap": ["CustomVariables", "OpenVpnSg", "Value"]},
+					"SafCidr": { "Fn::FindInMap": ["CustomVariables", "SafCidr", "Value"]},
+					"NatCidrA": {"Fn::GetAtt": ["VPC", "Outputs.NatEIP2A"]},
+					"NatCidrC": {"Fn::GetAtt": ["VPC", "Outputs.NatEIP2C"]},
+					"JenkinsMgmtSg": {"Fn::ImportValue" : {"Fn::Sub" : "{{ hostvars[groups['stack'][0]]['jenkins-management-sg'] }}"}},
+					"TrendmicroSg": { "Fn::FindInMap": ["CustomVariables", "TrendmicroSg", "Value"]},
+					"SyntheticsMenionSg": {"Fn::ImportValue" : {"Fn::Sub" : "{{ hostvars[groups['stack'][0]]['SyntheticsMenionSg'] }}"}}
+				}
+			}
+		},
+		"CoreServers":{
+			"Type": "AWS::CloudFormation::Stack",
+			"Metadata":{ "Comment": "Spinup/Updates the core ec2 - servers (Jenkins, rundeck)" },
+			"DependsOn": "SecurityGroups",
+			"Properties": {
+				"TemplateURL": "https://cwds-cloudformation.s3.amazonaws.com/Environments/{{env_name.stdout}}/cf-{{env_name.stdout}}-coreservers.json",
+				"TimeoutInMinutes": "10",
+				"Parameters": {
+					"EnvName": { "Fn::FindInMap": ["CustomVariables", "EnvName", "Value"]},
+					"PatchGroups1": { "Fn::FindInMap": ["CustomVariables", "PatchGroups1", "Value"]},
+					"PatchGroups2": { "Fn::FindInMap": ["CustomVariables", "PatchGroups2", "Value"]},
+					"PatchGroups3": { "Fn::FindInMap": ["CustomVariables", "PatchGroups3", "Value"]},
+					"PrivateSubnet3A": {"Fn::GetAtt": ["VPC", "Outputs.PrivateSubnet3A"]},
+					"KeyName": { "Fn::FindInMap": ["CustomVariables", "KeyName", "Value"]},
+					"ImageID": { "Fn::FindInMap": ["CustomVariables", "ImageID", "Value"]},
+					"InstanceType": { "Fn::FindInMap": ["CustomVariables", "InstanceType", "Value"]},
+					"NessusImageID": { "Fn::FindInMap": ["CustomVariables", "NessusImageID", "Value"]},
+					"NessusInstanceType": { "Fn::FindInMap": ["CustomVariables", "NessusInstanceType", "Value"]},
+					"RundeckInstanceType": { "Fn::FindInMap": ["CustomVariables", "RundeckInstanceType", "Value"]},
+					"DisableApiTermination": { "Fn::FindInMap": ["CustomVariables", "DisableApiTermination", "Value"]},
+					"ManagedServerRules": {"Fn::GetAtt": ["SecurityGroups", "Outputs.ManagedServerRules"]},
+					"JenkinsSg": {"Fn::GetAtt": ["SecurityGroups", "Outputs.JenkinsSg"]},
+					"Rundecksg": {"Fn::GetAtt": ["SecurityGroups", "Outputs.Rundecksg"]},
+					"proxydb2sg": {"Fn::GetAtt": ["SecurityGroups", "Outputs.proxydb2sg"]},
+					"NessusScannerSg": {"Fn::GetAtt": ["SecurityGroups", "Outputs.NessusScannerSg"]}
+
+				}
+			}
+		},
+		"ApplicationServers":{
+			"Type": "AWS::CloudFormation::Stack",
+			"Metadata":{ "Comment": "Application ec2 - servers" },
+			"DependsOn": "SecurityGroups",
+			"Properties": {
+				"TemplateURL": "https://cwds-cloudformation.s3.amazonaws.com/Environments/{{env_name.stdout}}/cf-{{env_name.stdout}}-appservers.json",
+				"TimeoutInMinutes": "10",
+				"Parameters": {
+					"EnvName": { "Fn::FindInMap": ["CustomVariables", "EnvName", "Value"]},
+					"PatchGroups1": { "Fn::FindInMap": ["CustomVariables", "PatchGroups1", "Value"]},
+					"PatchGroups2": { "Fn::FindInMap": ["CustomVariables", "PatchGroups2", "Value"]},
+					"PatchGroups3": { "Fn::FindInMap": ["CustomVariables", "PatchGroups3", "Value"]},
+					"PublicSubnet2A": {"Fn::GetAtt": ["VPC", "Outputs.PublicSubnet2A"]},
+					"PublicSubnet2C": {"Fn::GetAtt": ["VPC", "Outputs.PublicSubnet2C"]},
+					"PrivateSubnet2A": {"Fn::GetAtt": ["VPC", "Outputs.PrivateSubnet2A"]},
+					"PrivateSubnet2C":{"Fn::GetAtt": ["VPC", "Outputs.PrivateSubnet2C"]},
+					"KeyName": { "Fn::FindInMap": ["CustomVariables", "KeyName", "Value"]},
+					"ImageID": { "Fn::FindInMap": ["CustomVariables", "ImageID", "Value"]},
+					"InstanceType": { "Fn::FindInMap": ["CustomVariables", "InstanceType", "Value"]},
+					"DisableApiTermination": { "Fn::FindInMap": ["CustomVariables", "DisableApiTermination", "Value"]},
+					"SSLCertificateId": { "Fn::FindInMap": ["CustomVariables", "SSLCertificateId", "Value"]},
+					"idpdeploy": { "Fn::FindInMap": ["Conditions", "idpdeploy", "Value"]},
+					"cmapideploy":{ "Fn::FindInMap": ["Conditions", "cmapideploy", "Value"]},
+					"cansdeploy":{ "Fn::FindInMap": ["Conditions", "cansdeploy", "Value"]},
+					"formsapideploy": { "Fn::FindInMap": ["Conditions", "formsapideploy", "Value"]},
+					"perry3node": { "Fn::FindInMap": ["Conditions", "perry3node", "Value"]},
+					"ManagedServerRules":{"Fn::GetAtt": ["SecurityGroups", "Outputs.ManagedServerRules"]},
+					"WebProxyGatewaySg": {"Fn::GetAtt": ["SecurityGroups", "Outputs.WebProxyGatewaySg"]},
+					"WebProxyGatewaySg2": {"Fn::GetAtt": ["SecurityGroups", "Outputs.WebProxyGatewaySg2"]},
+					"WebGatewayElbSg": 	{"Fn::GetAtt": ["SecurityGroups", "Outputs.WebGatewayElbSg"]},
+					"WebAppsg":{"Fn::GetAtt": ["SecurityGroups", "Outputs.WebAppsg"]},
+					"Appsg": {"Fn::GetAtt": ["SecurityGroups", "Outputs.Appsg"]},
+			  		"Perrysg":{"Fn::GetAtt": ["SecurityGroups", "Outputs.Perrysg"]},
+					"IDPsg":{"Fn::GetAtt": ["SecurityGroups", "Outputs.IDPsg"]},
+					"WebPerryExternalsg":{"Fn::GetAtt": ["SecurityGroups", "Outputs.WebPerryExternalsg"]},
+					"Apisg":{"Fn::GetAtt": ["SecurityGroups", "Outputs.Apisg"]},
+					"WebApisg": {"Fn::GetAtt": ["SecurityGroups", "Outputs.WebApisg"]},
+					"WebApisg2":{"Fn::GetAtt": ["SecurityGroups", "Outputs.WebApisg2"]},
+					"proxydb2sg": {"Fn::GetAtt": ["SecurityGroups", "Outputs.proxydb2sg"]}
+
+				}
+			}
+		},
+		"Databases": {
+			"Type": "AWS::CloudFormation::Stack",
+			"Metadata":{ "Comment": "creates/updates the databases" },
+			"DependsOn": "SecurityGroups",
+			"Properties": {
+				"TemplateURL": "https://cwds-cloudformation.s3.amazonaws.com/Environments/{{env_name.stdout}}/cf-{{env_name.stdout}}-dbservers.json",
+				"Parameters": {
+					"EnvName": { "Fn::FindInMap": ["CustomVariables", "EnvName", "Value"]},
+					"PatchGroups1": { "Fn::FindInMap": ["CustomVariables", "PatchGroups1", "Value"]},
+					"PatchGroups2": { "Fn::FindInMap": ["CustomVariables", "PatchGroups2", "Value"]},
+					"PatchGroups3": { "Fn::FindInMap": ["CustomVariables", "PatchGroups3", "Value"]},
+					"PrivateSubnet1A": {"Fn::GetAtt": ["VPC", "Outputs.PrivateSubnet1A"]},
+					"PrivateSubnet1C":{"Fn::GetAtt": ["VPC", "Outputs.PrivateSubnet1C"]},
+					"KeyName": { "Fn::FindInMap": ["CustomVariables", "KeyName", "Value"]},
+					"ImageID": { "Fn::FindInMap": ["CustomVariables", "ImageID", "Value"]},
+					"InstanceType": { "Fn::FindInMap": ["CustomVariables", "InstanceType", "Value"]},
+					"ElasticSearchInstanceType": { "Fn::FindInMap": ["CustomVariables", "ElasticSearchInstanceType", "Value"]},
+					"EnvironmentType":{ "Fn::FindInMap": ["Conditions", "EnvironmentType", "Value"]},
+					"DisableApiTermination": { "Fn::FindInMap": ["CustomVariables", "DisableApiTermination", "Value"]},
+					"ManagedServerRules":{"Fn::GetAtt": ["SecurityGroups", "Outputs.ManagedServerRules"]},
+					"postgressg": {"Fn::GetAtt": ["SecurityGroups", "Outputs.postgressg"]},
+					"Calspgsg": {"Fn::GetAtt": ["SecurityGroups", "Outputs.Calspgsg"]},
+					"db2sg":{"Fn::GetAtt": ["SecurityGroups", "Outputs.db2sg"]},
+					"elasticsearchsg": {"Fn::GetAtt": ["SecurityGroups", "Outputs.elasticsearchsg"]},
+					"Redissg":{"Fn::GetAtt": ["SecurityGroups", "Outputs.Redissg"]},
+					"ElasticSearchVolume": { "Fn::FindInMap": ["DbVariables", "ElasticSearchVolume", "Value"]},
+					"PostgresReadReplica":{ "Fn::FindInMap": ["DbVariables", "PostgresReadReplica", "Value"]},
+					"DBInstancetype": { "Fn::FindInMap": ["DbVariables", "DBInstancetype", "Value"]},
+					"DBAllocatedStorage":{ "Fn::FindInMap": ["DbVariables", "DBAllocatedStorage", "Value"]},
+					"PostgresVersion": { "Fn::FindInMap": ["DbVariables", "PostgresVersion", "Value"]},
+					"PostgresVersionUpgrade": { "Fn::FindInMap": ["DbVariables", "PostgresVersionUpgrade", "Value"]},
+					"PostgresParameterGroup": { "Fn::FindInMap": ["DbVariables", "PostgresParameterGroup", "Value"]},
+					"Iops":{ "Fn::FindInMap": ["DbVariables", "Iops", "Value"]},
+					"InstanceIdentifier":{ "Fn::FindInMap": ["CustomVariables", "EnvName", "Value"]},
+					"DBUsername":{ "Fn::FindInMap": ["DbVariables", "DBUsername", "Value"]},
+					"DBPassword": {"Ref": "DBPassword"},
+					"DBName": { "Fn::FindInMap": ["DbVariables", "DBName", "Value"]},
+					"KMSKeyID": {"Fn::ImportValue" : {"Fn::Sub" : "{{ hostvars[groups['stack'][0]]['environment_name'] }}-KMSKeyID"}},
+					"CacheNodeType": { "Fn::FindInMap": ["DbVariables", "CacheNodeType", "Value"]},
+					"RedisCacheClusters": {"Fn::FindInMap": ["DbVariables", "RedisCacheClusters", "Value"]},
+					"RedisAutomaticFailoverEnabled": {"Fn::FindInMap": ["DbVariables", "RedisAutomaticFailoverEnabled", "Value"]},
+					"createES1node": { "Fn::FindInMap": ["Conditions", "createES1node", "Value"]}
+				}
+			}
+		},
+		"Alarms": {
+			"Type": "AWS::CloudFormation::Stack",
+			"Metadata":{ "Comment": "Alarms for All the Servers in the Environment" },
+			"DependsOn": "Databases",
+			"Properties": {
+				"TemplateURL": "https://cwds-cloudformation.s3.amazonaws.com/Environments/{{env_name.stdout}}/cf-{{env_name.stdout}}-alarms.json",
+				"TimeoutInMinutes": "10",
+				"Parameters": {
+					"EnvName": { "Fn::FindInMap": ["CustomVariables", "EnvName", "Value"]},
+					"CriticalWarning": {"Fn::ImportValue" : {"Fn::Sub" : "SNSAlertCritical"}},
+					"EnvironmentType":{ "Fn::FindInMap": ["Conditions", "EnvironmentType", "Value"]},
+					"InternalWebGatewayAInstanceId": {"Fn::GetAtt": ["ApplicationServers", "Outputs.InternalWebGatewayAInstanceId"]},
+					"InternalWebGatewayCInstanceId": {"Fn::GetAtt": ["ApplicationServers", "Outputs.InternalWebGatewayCInstanceId"]},
+					"AppServerAInstanceId": {"Fn::GetAtt": ["ApplicationServers", "Outputs.AppServerAInstanceId"]},
+					"AppServerCInstanceId": {"Fn::GetAtt": ["ApplicationServers", "Outputs.AppServerCInstanceId"]},
+					"PerryServerAInstanceId": {"Fn::GetAtt": ["ApplicationServers", "Outputs.PerryServerAInstanceId"]},
+					"PerryServerCInstanceId": {"Fn::GetAtt": ["ApplicationServers", "Outputs.PerryServerCInstanceId"]},
+					"ApiServerAInstanceId": {"Fn::GetAtt": ["ApplicationServers", "Outputs.ApiServerAInstanceId"]},
+					"ApiServerCInstanceId": {"Fn::GetAtt": ["ApplicationServers", "Outputs.ApiServerCInstanceId"]},
+					"RundeckServerAInstanceId": {"Fn::GetAtt": ["CoreServers", "Outputs.RundeckServerAInstanceId"]},
+					"JenkinsInstanceId": {"Fn::GetAtt": ["CoreServers", "Outputs.JenkinsInstanceId"]},
+					"DB2AInstanceId": {"Fn::GetAtt": ["Databases", "Outputs.DB2AInstanceId"]},
+					"PostgreSQLAInstanceId": {"Fn::GetAtt": ["Databases", "Outputs.PostgreSQLAInstanceId"]},
+					"ElasticSearchInstanceId": {"Fn::GetAtt": ["Databases", "Outputs.ElasticSearchInstanceId"]},
+					"createES1node": { "Fn::FindInMap": ["Conditions", "createES1node", "Value"]}
+
+				}
+			}
+		},
+		"Route53": {
+			"Type": "AWS::CloudFormation::Stack",
+			"Metadata":{ "Comment": "Creates/Updates recordsets in the environment" },
+			"DependsOn": "Databases",
+			"Properties": {
+				"TemplateURL": "https://cwds-cloudformation.s3.amazonaws.com/Environments/{{env_name.stdout}}/cf-{{env_name.stdout}}-hostedzones.json",
+				"TimeoutInMinutes": "10",
+				"Parameters": {
+					"EnvName": { "Fn::FindInMap": ["CustomVariables", "EnvName", "Value"]},
+					"EnvironmentType":{ "Fn::FindInMap": ["Conditions", "EnvironmentType", "Value"]},
+					"idpdeploy": { "Fn::FindInMap": ["Conditions", "idpdeploy", "Value"]},
+					"cmapideploy":{ "Fn::FindInMap": ["Conditions", "cmapideploy", "Value"]},
+					"formsapideploy": { "Fn::FindInMap": ["Conditions", "formsapideploy", "Value"]},
+					"cansdeploy":{ "Fn::FindInMap": ["Conditions", "cansdeploy", "Value"]},
+					"perry3node": { "Fn::FindInMap": ["Conditions", "perry3node", "Value"]},
+					"HostedZoneName": { "Fn::FindInMap": ["CustomVariables", "HostedZoneName", "Value"]},
+					"InternalWebGatewayA": {"Fn::GetAtt": ["ApplicationServers", "Outputs.InternalWebGatewayA"]},
+					"InternalWebGatewayC": {"Fn::GetAtt": ["ApplicationServers", "Outputs.InternalWebGatewayC"]},
+					"ELBWebgateway": {"Fn::GetAtt": ["ApplicationServers", "Outputs.ELBWebgateway"]},
+					"AppServerA": {"Fn::GetAtt": ["ApplicationServers", "Outputs.AppServerA"]},
+					"AppServerC": {"Fn::GetAtt": ["ApplicationServers", "Outputs.AppServerC"]},
+					"ElbIntake": {"Fn::GetAtt": ["ApplicationServers", "Outputs.ElbIntake"]},
+					"ElbCals": {"Fn::GetAtt": ["ApplicationServers", "Outputs.ElbCals"]},
+					"ElbCans": {"Fn::GetAtt": ["ApplicationServers", "Outputs.ElbCans"]},
+					"ElbDashboard": {"Fn::GetAtt": ["ApplicationServers", "Outputs.ElbDashboard"]},
+					"ElbCap": {"Fn::GetAtt": ["ApplicationServers", "Outputs.ElbCap"]},
+					"PerryServerA": {"Fn::GetAtt": ["ApplicationServers", "Outputs.PerryServerA"]},
+					"PerryServerC": {"Fn::GetAtt": ["ApplicationServers", "Outputs.PerryServerC"]},
+					"PerryServer2A": {"Fn::GetAtt": ["ApplicationServers", "Outputs.PerryServer2A"]},
+					"ElbExternalPerry": {"Fn::GetAtt": ["ApplicationServers", "Outputs.ElbExternalPerry"]},
+					"ElbIDP": {"Fn::GetAtt": ["ApplicationServers", "Outputs.ElbIDP"]},
+                    "nuxeoELB": {"Fn::GetAtt": ["ApplicationServers", "Outputs.nuxeoELB"]},
+                    "dmsELB": {"Fn::GetAtt": ["ApplicationServers", "Outputs.dmsELB"]},
+                    "formsapiELB": {"Fn::GetAtt": ["ApplicationServers", "Outputs.formsapiELB"]},
+					"ApiServerA": {"Fn::GetAtt": ["ApplicationServers", "Outputs.ApiServerA"]},
+					"ApiServerC": {"Fn::GetAtt": ["ApplicationServers", "Outputs.ApiServerC"]},
+					"ElbCalsApi": {"Fn::GetAtt": ["ApplicationServers", "Outputs.ElbCalsApi"]},
+					"ElbFerbApi": {"Fn::GetAtt": ["ApplicationServers", "Outputs.ElbFerbApi"]},
+					"ElbDoraApi": {"Fn::GetAtt": ["ApplicationServers", "Outputs.ElbDoraApi"]},
+					"ElbGeoApi": {"Fn::GetAtt": ["ApplicationServers", "Outputs.ElbGeoApi"]},
+					"ElbCansApi": {"Fn::GetAtt": ["ApplicationServers", "Outputs.ElbCansApi"]},
+					"ElbCase": {"Fn::GetAtt": ["ApplicationServers", "Outputs.ElbCase"]},
+					"ElbCmapi": {"Fn::GetAtt": ["ApplicationServers", "Outputs.ElbCmapi"]},
+					"Jenkins": {"Fn::GetAtt": ["CoreServers", "Outputs.Jenkins"]},
+					"RundeckServerA": {"Fn::GetAtt": ["CoreServers", "Outputs.RundeckServerA"]},
+					"PostgresEndPoint": {"Fn::GetAtt": ["Databases", "Outputs.PostgresEndPoint"]},
+					"DB2A": {"Fn::GetAtt": ["Databases", "Outputs.DB2A"]},
+					"PostgreSQLA": {"Fn::GetAtt": ["Databases", "Outputs.PostgreSQLA"]},
+					"ElasticSearch": {"Fn::GetAtt": ["Databases", "Outputs.ElasticSearch"]},
+					"createES1node": { "Fn::FindInMap": ["Conditions", "createES1node", "Value"]},
+					"RedisElastiCachePrimaryEndPoint": {"Fn::GetAtt": ["Databases", "Outputs.RedisElastiCachePrimaryEndPoint"]}
+				}
+			}
+		}
+
+	}
+}

@@ -1,0 +1,418 @@
+{
+    "AWSTemplateFormatVersion" : "2010-09-09",
+    "Description" : "AWS CloudFormation Db2, Elastic Search, ElastiCache_Redis and Postgres RDS",
+    "Metadata": {
+        "About": {
+            "Author": {"value": "DevOps Engineering Team"},
+            "Contact": {"Value": "cwdsdevopsengineering@osi.ca.gov"},
+            "CreatedDate": {"Value": "May 22, 2018"},
+            "UpdatedDate": {"Value": "{{ansible_date_time.date}}"}
+          }
+    },
+    "Parameters": {
+        "EnvName": {
+            "Description": "Enviroment name",
+            "Type": "String"
+        },
+        "PatchGroups1" : {
+            "Description": "Patch Group name",
+			"Type": "String"
+        },
+        "PatchGroups2" : {
+            "Description": "Patch Group name",
+			"Type": "String"
+        },
+        "PatchGroups3" : {
+            "Description": "Patch Group name",
+			"Type": "String"
+        },
+        "PrivateSubnet1A":{
+            "Description": "Private Zone A Subnet ID",
+            "Type": "AWS::EC2::Subnet::Id"
+        },
+        "PrivateSubnet1C":{
+            "Description": "Private Zone C Subnet ID",
+            "Type": "AWS::EC2::Subnet::Id"
+        },
+        "EnvironmentType": {
+            "Description": "Condition to create db based on env type: docker or non-docker",
+            "Type": "String"
+        },
+        "createES1node": {
+              "Description": "Condition to create single node ES",
+              "Type": "String"
+        },
+        "PostgresReadReplica": {
+            "Description": "Read Replication for RDS",
+            "Type": "String"
+        },
+        "DBInstancetype": {
+            "Description": "Database Instance Class",
+            "Type": "String"
+        },
+        "DBAllocatedStorage": {
+            "Description": "The Size of the Database",
+            "Type": "Number"
+        },
+        "PostgresVersion": {
+            "Description": "Postgresql Enginer Version",
+            "Type": "String"
+        },
+        "PostgresVersionUpgrade": {
+            "Description": "Postgresql Enginer Version Upgrade Parameter",
+            "Type": "String"
+        },
+        "PostgresParameterGroup": {
+            "Description": "Postgresql parameter groups",
+            "Type": "String"  
+        },
+        "Iops": {
+            "Description": "The Size of the Database",
+            "Type": "Number"
+        },
+        "InstanceIdentifier":{
+            "Description": " Name for the DB instance that is unique in the region. For eg: Instance can be postgres-instance ",
+            "Type": "String"
+        },
+        "DBUsername":{
+            "Description": "Postgres Database admin account Username",
+            "Type": "String"
+        },
+        "DBPassword":{
+            "Description": "Postgres Database admin account Password",
+            "NoEcho": "true",
+            "Type": "String"
+        },
+        "DBName":{
+            "Description": "Postgres Database Name",
+            "Type": "String"
+        },
+        "KMSKeyID": {
+            "Description": "Kms key identification number",
+            "Type": "String"
+        },
+        "KeyName": {	
+              "Description": "Keyfile name that needs to be added to the instances ",
+              "Type": "String"
+        },
+        "ImageID":{
+              "Description": "Image ID to spin up the Instances",
+              "Type": "String"
+        },
+        "InstanceType": {
+            "Description": "Instanct type",
+            "Type": "String"
+        },
+        "ElasticSearchInstanceType": {
+              "Description": "Instance Type",
+              "Type": "String"
+          },
+        "DisableApiTermination": {
+              "Description": "Api Termination",
+              "Type": "String"
+        },
+        "ElasticSearchVolume": {
+            "Description": "ElasticSearch Volume size",
+            "Type": "Number"
+        },
+        "ManagedServerRules": {
+            "Description": "Managed Server Rules (common) security group",
+            "Type": "AWS::EC2::SecurityGroup::Id"
+        },
+        "postgressg":{
+            "Description": "Security Group for Postgres",
+            "Type": "String"
+        }, 
+        "Calspgsg": {
+            "Description": "Cals Postgres sg",
+            "Type": "AWS::EC2::SecurityGroup::Id"
+        },
+        "db2sg":{
+              "Description": "db2 sg",
+              "Type": "AWS::EC2::SecurityGroup::Id"
+        },
+        "elasticsearchsg": {
+            "Description": "elasticsearch sg",
+            "Type": "AWS::EC2::SecurityGroup::Id"
+        },
+        "Redissg": {
+            "Description": "Web Api sg",
+            "Type": "AWS::EC2::SecurityGroup::Id"
+        },
+        "CacheNodeType": {
+            "Description": "ElastiCache type",
+            "Type": "String"
+        },
+        "RedisCacheClusters": {
+            "Description": "Number of Nodes for redis elasticache",
+            "Type": "String"
+        },
+        "RedisAutomaticFailoverEnabled": {
+            "Description": "Redis Automatic failover Failover Enable",
+            "Type": "String"
+        }
+    },
+    "Conditions": {
+        "create-PostgresRDS": {"Fn::Equals": [{"Ref": "EnvironmentType"}, "nondocker"]},
+        "create-PostgresReadReplica": {"Fn::Equals": [{"Ref": "PostgresReadReplica"}, "true"]},
+        "create-docker-db": {"Fn::Equals": [{"Ref": "EnvironmentType"}, "docker"]},
+        "createES1node": {"Fn::Equals": [{"Ref": "createES1node"}, "true"]}
+    },
+    "Resources" : {   
+        "DBParameterGroup1": {
+             "Type": "AWS::RDS::DBParameterGroup",
+             "Condition": "create-PostgresRDS",
+             "Properties": {
+                 "Description": "Postgres RDS Parameter Group",
+                 "Family": {"Ref": "PostgresParameterGroup"},
+                 "Parameters": {
+                   "max_prepared_transactions": 50,
+                   "log_connections": 1,
+                   "log_disconnections": 1,
+                   "log_statement": "all",
+                   "rds.log_retention_period": 10080
+                 },
+                 "Tags": [
+                     {"Key": "Name",	"Value":  { "Fn::Join": ["",[{"Ref": "EnvName"},"-","postgres"]]}},
+                     {"Key": "Environment", "Value": {"Ref": "EnvName"}}
+                 ]
+             }
+        },
+        "SubnetGroup": {
+             "Type" : "AWS::RDS::DBSubnetGroup",
+             "Condition": "create-PostgresRDS",
+             "Properties": {
+                 "DBSubnetGroupDescription": "DB Private Instances Subnet Group",
+                 "SubnetIds": [
+                     { "Ref": "PrivateSubnet1A" },
+                     { "Ref": "PrivateSubnet1C" }
+                 ]
+             }
+        },
+        "PostgresDBInstance": {
+             "Type": "AWS::RDS::DBInstance",
+             "Condition": "create-PostgresRDS",
+             "Properties": {
+                 "Engine": "postgres",
+                 "EngineVersion": {"Ref": "PostgresVersion"},
+                 "AllowMajorVersionUpgrade"	: {"Ref": "PostgresVersionUpgrade"},
+                 "AutoMinorVersionUpgrade": "false",
+                 "DBParameterGroupName": {"Ref": "DBParameterGroup1"},
+                 "DBInstanceClass": {"Ref": "DBInstancetype"},
+                 "MultiAZ": "true",
+                 "StorageEncrypted": "true",
+                 "StorageType": "io1",
+                 "AllocatedStorage": {"Ref": "DBAllocatedStorage"},
+                 "Iops": {"Ref": "Iops"},
+                 "DBInstanceIdentifier": {"Ref": "InstanceIdentifier"},
+                 "MasterUsername": {"Ref": "DBUsername"},
+                 "MasterUserPassword": {"Ref": "DBPassword"},
+                 "DBSubnetGroupName": {"Ref": "SubnetGroup"},
+                 "PubliclyAccessible": "false",
+                 "VPCSecurityGroups": [{"Ref": "postgressg"}],
+                 "DBName": {"Ref": "DBName"},
+                 "BackupRetentionPeriod": "15",
+                 "PreferredBackupWindow": "09:00-12:00",
+                 "PreferredMaintenanceWindow": "sun:07:00-sun:09:00",
+                 "KmsKeyId": {"Ref": "KMSKeyID"},
+                 "Tags" :  [
+                     {"Key": "Environment", "Value": {"Ref": "EnvName"}},                     
+                     { "Key"  : "Name", "Value":  { "Fn::Join": ["",[{"Ref": "EnvName"},"-","MasterDB"]]} }
+                 ]
+             }
+        },
+        "ReplicaDB": {
+             "Type" : "AWS::RDS::DBInstance",
+             "Condition": "create-PostgresReadReplica",
+             "Properties" : {
+                 "SourceDBInstanceIdentifier" : { "Ref" : "PostgresDBInstance" },
+                 "DBInstanceClass" : { "Ref" : "DBInstancetype" },
+                 "DBInstanceIdentifier": { "Fn::Join": ["-",[{"Ref": "InstanceIdentifier"},"replica"]]},
+                 "KmsKeyId": {"Ref": "KMSKeyID"}, 
+                 "Tags" : [
+                     { "Key"  : "Name", "Value":  { "Fn::Join": ["",[{"Ref": "EnvName"},"-","ReadReplicaDB"]]} },
+                     {"Key": "Environment", "Value": {"Ref": "EnvName"}}
+                 ]                 
+             }
+        },
+  
+        "Ec2Server1A": {
+              "Type": "AWS::EC2::Instance",
+              "Condition": "create-docker-db",
+              "Metadata":{ "Comment": "Postgresql Database Server" },
+              "Properties": {
+                  "ImageId": {"Ref": "ImageID"},
+                  "BlockDeviceMappings": [
+                      {
+                          "DeviceName": "/dev/xvda",
+                          "Ebs": {
+                              "DeleteOnTermination": "false",
+                              "VolumeSize": "100"
+                          }
+                      }
+                  ],
+                  "InstanceType": {"Ref": "InstanceType"},
+                  "SubnetId": { "Ref": "PrivateSubnet1A" },
+                  "IamInstanceProfile": "Cloudwatch",
+                  "Monitoring": "true",
+                  "KeyName": {"Ref":"KeyName"},
+                  "InstanceInitiatedShutdownBehavior": "stop",
+                  "DisableApiTermination": {"Ref": "DisableApiTermination"},
+                  "SecurityGroupIds": [{"Ref": "ManagedServerRules"}, {"Ref": "postgressg"}, {"Ref": "Calspgsg"}],
+                  "Tags": [
+                              { "Key": "Role", "Value": "database"},
+                              {"Key": "Environment", "Value": {"Ref": "EnvName"}},
+                              {"Key": "Name", "Value":  { "Fn::Join": ["",[{"Ref": "EnvName"},"-","postgresql"]]}},
+                              {"Key": "Patch Group", "Value": {"Ref": "PatchGroups1"}}
+                          ]
+              }
+        },
+        "Ec2Server2A": {
+              "Type": "AWS::EC2::Instance",
+              "Condition": "create-docker-db",
+              "Metadata":{ "Comment": "db2 Database server" },
+              "Properties": {
+                  "ImageId": {"Ref": "ImageID"},
+                  "BlockDeviceMappings": [
+                      {
+                          "DeviceName": "/dev/xvda",
+                          "Ebs": {
+                              "DeleteOnTermination": "false",
+                              "VolumeSize": "100"
+                          }
+                      }
+                  ],
+                  "InstanceType": {"Ref": "InstanceType"},
+                  "SubnetId": { "Ref": "PrivateSubnet1A" },
+                  "IamInstanceProfile": "Cloudwatch",
+                  "Monitoring": "true",
+                  "KeyName": {"Ref":"KeyName"},
+                  "InstanceInitiatedShutdownBehavior": "stop",
+                  "DisableApiTermination": {"Ref": "DisableApiTermination"},
+                  "SecurityGroupIds": [{"Ref": "db2sg"},{"Ref": "ManagedServerRules"}],
+                  "Tags": [
+                              { "Key": "Application", "Value": {"Ref": "AWS::StackName"}},
+                              {"Key": "Environment", "Value": {"Ref": "EnvName"}},
+                              {"Key": "Name", "Value":  { "Fn::Join": ["",[{"Ref": "EnvName"},"-","db2"]]}},
+                              {"Key": "Patch Group", "Value": {"Ref": "PatchGroups2"}}
+                          ]
+              }
+        },
+  
+        "Ec2Server3": {
+             "Type": "AWS::EC2::Instance",
+             "Condition": "createES1node",
+             "Properties":{     
+                 "ImageId": { "Ref": "ImageID" },
+                 "BlockDeviceMappings": [
+                     {
+                         "DeviceName": "/dev/xvda",
+                         "Ebs": {
+                             "DeleteOnTermination": "true",
+                             "VolumeSize": {"Ref": "ElasticSearchVolume"}
+                         }
+                     }
+                 ],
+                 "InstanceType": {"Ref": "ElasticSearchInstanceType"},
+                 "SubnetId": { "Ref": "PrivateSubnet1A" },
+                 "IamInstanceProfile": "Cloudwatch",
+                 "Monitoring": "true",
+                 "KeyName": {"Ref":"KeyName"},
+                 "InstanceInitiatedShutdownBehavior": "stop",
+                 "DisableApiTermination": {"Ref": "DisableApiTermination"},
+                 "SecurityGroupIds": [{ "Ref" : "elasticsearchsg"},{"Ref": "ManagedServerRules"}],
+                 "Tags": [
+                     {"Key": "Environment", "Value": {"Ref": "EnvName"}},
+                     {"Key": "Application", "Value": {"Ref": "AWS::StackName"}},
+                     {"Key": "Name", "Value":  { "Fn::Join": ["",[{"Ref": "EnvName"},"-","elasticsearch"]]}},
+                     {"Key": "Patch Group", "Value": {"Ref": "PatchGroups1"}}
+                 ]
+             }
+        },
+        
+        "elasticacheSubnetGroup": {
+             "Type": "AWS::ElastiCache::SubnetGroup",
+             "Properties": {
+                 "CacheSubnetGroupName": { "Fn::Join": ["",[{"Ref": "AWS::StackName"},"-","subnet-group"]]},
+                 "Description": "Redis Subnet Group",
+                 "SubnetIds": [  { "Ref": "PrivateSubnet1A" },  { "Ref": "PrivateSubnet1C" }]
+             }
+        },
+        "RedisElastiCache" : {
+            "Type": "AWS::ElastiCache::ReplicationGroup",
+            "Properties": {
+                 "ReplicationGroupDescription" : "Redis Replication",
+                 "NumCacheClusters" : { "Ref" : "RedisCacheClusters" },
+                 "ReplicationGroupId": {"Ref": "EnvName"},
+                 "Engine" : "redis",
+                 "CacheNodeType" : { "Ref" : "CacheNodeType" },
+                 "AutoMinorVersionUpgrade" : "true",
+                 "AutomaticFailoverEnabled" : { "Ref" : "RedisAutomaticFailoverEnabled" },
+                 "CacheSubnetGroupName": { "Ref" : "elasticacheSubnetGroup" },
+                 "CacheParameterGroupName": "default.redis3.2",
+                 "SecurityGroupIds": [ { "Ref": "Redissg" }],
+                 "EngineVersion" : "3.2.4",
+                 "PreferredMaintenanceWindow" : "sun:07:00-sun:09:00",
+                 "Tags": [
+                     {"Key": "Environment", "Value": {"Ref": "EnvName"}},
+                     {"Key": "Application", "Value": {"Ref": "AWS::StackName"}},
+                     {"Key": "Name", "Value":  {"Ref": "EnvName"}}
+                 ]
+            }
+        }
+    },
+    
+    "Outputs": {
+        
+        "PostgresEndPoint": {
+             "Description": "creates postgres rds endpoint if exists",
+             "Value": {
+                 "Fn::If": ["create-PostgresRDS",{ "Fn::GetAtt": ["PostgresDBInstance","Endpoint.Address"]},"NoValue" ]
+             },
+             "Export": { "Name": { "Fn::Join": ["",[{"Ref": "EnvName"},"-","postgresRDS"]]}}
+         },
+         "PostgreSQLA": {
+             "Description": "Postgres Server Private IP",
+             "Value": {
+                 "Fn::If" : ["create-docker-db",{ "Fn::GetAtt": ["Ec2Server1A","PrivateIp"]},"NoValue"]
+             },
+             "Export": { "Name": { "Fn::Join": ["",[{"Ref": "EnvName"},"-","PostgreSQL"]]}} 
+          },
+         "PostgreSQLAInstanceId": {
+             "Description": "Postgres Server Instance Id",
+             "Value": {
+                 "Fn::If" : ["create-docker-db",{"Ref": "Ec2Server1A"},"NoValue" ]
+             },
+             "Export": { "Name": { "Fn::Join": ["",[{"Ref": "EnvName"},"-","PostgreSQL-InstanceId"]]}} 
+          },
+          "DB2A": {
+             "Description": "db2 docker Server Private IP",
+             "Value": {
+                 "Fn::If": ["create-docker-db",{ "Fn::GetAtt": ["Ec2Server2A","PrivateIp"]},"NoValue"]
+             },
+             "Export": { "Name": { "Fn::Join": ["",[{"Ref": "EnvName"},"-","DB2A"]]}}            
+          },
+          "DB2AInstanceId": {
+             "Description": "db2 docker Server Instance Id",
+             "Value": {
+                 "Fn::If": ["create-docker-db",{"Ref": "Ec2Server2A"},"NoValue" ]
+             },
+             "Export": { "Name": { "Fn::Join": ["",[{"Ref": "EnvName"},"-","DB2A-InstanceId"]]}}            
+          },
+          "ElasticSearch": {
+             "Description": "Elastic Search Server Private IP",
+             "Value": {"Fn::If": ["createES1node",{"Fn::GetAtt": ["Ec2Server3","PrivateIp"]},"NoValue"]},
+             "Export": { "Name": { "Fn::Join": ["",[{"Ref": "EnvName"},"-","ElasticSearch"]]}}            
+          },
+          "ElasticSearchInstanceId": {
+             "Description": "Elastic Search Server Instance Id",
+             "Value": {"Fn::If": ["createES1node",{"Ref": "Ec2Server3"},"NoValue"]},
+             "Export": { "Name": { "Fn::Join": ["",[{"Ref": "EnvName"},"-","ElasticSearch-InstanceId"]]}}            
+          },
+          "RedisElastiCachePrimaryEndPoint": {
+            "Description":"Redis endpoint",
+            "Value": { "Fn::GetAtt": ["RedisElastiCache", "PrimaryEndPoint.Address"]},
+            "Export": { "Name": { "Fn::Join": ["",[{"Ref": "EnvName"},"-","RedisElastiCache"]]}}
+         }
+    }
+}

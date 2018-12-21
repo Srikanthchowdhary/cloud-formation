@@ -1,0 +1,421 @@
+{
+    "AWSTemplateFormatVersion": "2010-09-09",
+    "Description": "VPC with 4 Public and 5 Private Subnets associated to 3 Routes ",
+    "Metadata": {
+        "About": {
+            "Author": {"value": "DevOps Engineering Team"},
+            "Contact": {"Value": "cwdsdevopsengineering@osi.ca.gov"},
+            "CreatedDate": {"Value": "May 22, 2018"},
+            "UpdatedDate": {"Value": "{{ansible_date_time.date}}"}
+        }
+    },
+     "Parameters": {
+		    "EnvName": {
+			      "Description": "General Name",
+			      "Type": "String"
+		    },
+        "VpcCidrBlock": {
+	    	  	"Description": "VPC Cidr Block",
+            "Type": "String"
+		    },
+        "RegionAZNameA": {
+	  		    "Description": "Availability Zone A Name in Region",
+            "Type": "AWS::EC2::AvailabilityZone::Name"
+        },
+        "RegionAZNameC": {
+		  	    "Description": "Availability Zone C Name in Region",
+            "Type": "AWS::EC2::AvailabilityZone::Name"
+        },
+        "PublicCidr2A":{
+            "Description": "Public Zone 2A Cidr Block",
+            "Type": "String"
+        },
+        "PublicCidr2C":{
+            "Description": "Public Zone 2C Cidr Block",
+            "Type": "String"
+        },
+        "PrivateCidr1A":{
+            "Description": "Private Zone 1A Cidr Block",
+            "Type": "String"
+        },
+        "PrivateCidr1C":{
+            "Description": "Private Zone 1C application Cidr Block",
+            "Type": "String"
+        },
+        "PrivateCidr2A":{
+            "Description": "Private Zone 2A core components Cidr Block",
+            "Type": "String"
+        },
+        "PrivateCidr2C":{
+            "Description": "Private Zone 2C application Cidr Block",
+            "Type": "String"
+        },
+        "PrivateCidr3A":{
+            "Description": "Private Zone 3A core components Cidr Block",
+            "Type": "String"
+        }     
+    },
+
+    "Resources": {
+        "VPC": {
+          "Type": "AWS::EC2::VPC",
+          "Metadata":{
+            "Comment": "Creates VPC with CIDR Range"
+          },
+          "Properties": {
+              "EnableDnsSupport" : "true",
+              "EnableDnsHostnames" : "true",
+              "InstanceTenancy" : "default",
+              "CidrBlock": { "Ref": "VpcCidrBlock" },
+              "Tags": [
+                  {"Key": "Environment", "Value": {"Ref": "EnvName"}},
+                  {"Key": "Name", "Value": {"Ref": "EnvName"}}
+              ]
+          }
+        },
+        "PublicSubnet2A": {
+          "Type": "AWS::EC2::Subnet",
+          "Properties": {
+            "AvailabilityZone": { "Ref": "RegionAZNameA" },
+            "VpcId": { "Ref": "VPC"},
+            "CidrBlock": { "Ref": "PublicCidr2A" },
+            "Tags": [
+                {"Key": "Environment", "Value": {"Ref": "EnvName"}},
+                {"Key": "Role", "Value":"public-network"},
+                {"Key": "Name", "Value": { "Fn::Join": ["",["public-2A","-",{ "Ref": "EnvName"}]]}}
+            ]
+          }
+        },
+        "PublicSubnet2C": {
+            "Type": "AWS::EC2::Subnet",
+            "Properties": {
+                "AvailabilityZone": { "Ref": "RegionAZNameC" },
+                "VpcId": { "Ref": "VPC"},
+                "CidrBlock": { "Ref": "PublicCidr2C" },
+                "Tags": [
+                    {"Key": "Environment", "Value": {"Ref": "EnvName"}},
+                    {"Key": "Role", "Value":"public-network"},
+                    {"Key": "Name", "Value": { "Fn::Join": ["",["public-2C","-",{ "Ref": "EnvName"}]]}}
+                ]
+            }
+        },
+        "PrivateSubnet1A": {
+            "Type": "AWS::EC2::Subnet",
+            "Properties": {
+                "AvailabilityZone": { "Ref": "RegionAZNameA" },
+                "VpcId": { "Ref": "VPC"},
+                "CidrBlock": {"Ref": "PrivateCidr1A"},
+                "Tags": [
+                    {"Key": "Environment", "Value": {"Ref": "EnvName"}},
+                    {"Key": "Role", "Value":"private-network"},
+                    {"Key": "Name", "Value": { "Fn::Join": ["",["private-1A","-",{ "Ref": "EnvName"}]]}}
+                 ]
+             }
+        },
+       "PrivateSubnet1C": {
+            "Type": "AWS::EC2::Subnet",
+            "Properties": {
+                "AvailabilityZone": { "Ref": "RegionAZNameC" },
+                "VpcId": { "Ref": "VPC"},
+                "CidrBlock": {"Ref": "PrivateCidr1C"},
+                "Tags": [
+                    {"Key": "Environment", "Value": {"Ref": "EnvName"}},
+                    {"Key": "Role", "Value":"private-network"},
+                    {"Key": "Name", "Value": { "Fn::Join": ["",["private-1C","-",{ "Ref": "EnvName"}]]}}
+                 ]
+             }
+        },
+        "PrivateSubnet2A": {
+            "Type": "AWS::EC2::Subnet",
+            "Properties": {
+                "AvailabilityZone": { "Ref": "RegionAZNameA" },
+                "VpcId": { "Ref": "VPC"},
+                "CidrBlock": {"Ref": "PrivateCidr2A"},
+                "Tags": [
+                    {"Key": "Environment", "Value": {"Ref": "EnvName"}},
+                    {"Key": "Role", "Value":"private-network"},
+                    {"Key": "Name", "Value": { "Fn::Join": ["",["private-2A","-",{ "Ref": "EnvName"}]]}}
+                 ]
+             }
+        },
+        "PrivateSubnet2C": {
+            "Type": "AWS::EC2::Subnet",
+            "Properties": {
+                "AvailabilityZone": { "Ref": "RegionAZNameC" },
+                "VpcId": { "Ref": "VPC"},
+                "CidrBlock": {"Ref": "PrivateCidr2C"},
+                "Tags": [
+                    {"Key": "Environment", "Value": {"Ref": "EnvName"}},
+                    {"Key": "Role", "Value":"private-network"},
+                    {"Key": "Name", "Value": { "Fn::Join": ["",["private-2C","-",{ "Ref": "EnvName"}]]}}
+                 ]
+             }
+        },
+        "PrivateSubnet3A": {
+            "Type": "AWS::EC2::Subnet",
+            "Properties": {
+                "AvailabilityZone": { "Ref": "RegionAZNameA" },
+                "VpcId": { "Ref": "VPC"},
+                "CidrBlock": {"Ref": "PrivateCidr3A"},
+                "Tags": [
+                    {"Key": "Environment", "Value": {"Ref": "EnvName"}},
+                    {"Key": "Role", "Value":"private-network"},
+                    {"Key": "Name", "Value": { "Fn::Join": ["",["private-3A","-",{ "Ref": "EnvName"}]]}}
+                 ]
+             }
+        },
+        
+        "InternetGateway": {
+          "Type": "AWS::EC2::InternetGateway",
+          "Metadata":{
+					"Comment": "Creates Internet Gateway for Public Internet facing"
+					},
+          "Properties": {
+            "Tags": [
+                    {"Key": "Environment", "Value": {"Ref": "EnvName"}},
+                    {"Key": "Role", "Value":"public-network"},
+                    {"Key": "Name", "Value": { "Fn::Join": ["",["IGW","-",{ "Ref": "EnvName"}]]}}
+                 ]
+          }
+        },
+        "AttachInternetGateway": {
+          "Type": "AWS::EC2::VPCGatewayAttachment",
+          "Metadata": {
+            "Comment": "Attach the Internet Gateway created to the Main VPC"
+          },
+          "Properties": {
+            "VpcId": {"Ref": "VPC"},
+            "InternetGatewayId": { "Ref": "InternetGateway" }
+          }
+        },
+
+        "Route1": {
+          "Type": "AWS::EC2::RouteTable",
+          "Properties": {
+            "VpcId": { "Ref": "VPC"},
+            "Tags": [
+                {"Key": "Environment", "Value": {"Ref": "EnvName"}},
+                {"Key": "Role", "Value":"public-network"},
+                {"Key": "Name", "Value": { "Fn::Join": ["",["Route1","-",{ "Ref": "EnvName"}]]}}
+             ]
+          }
+        },
+        "InternetGatewayRoute": {
+          "Type": "AWS::EC2::Route",
+          "DependsOn": "AttachInternetGateway",
+          "Properties": {
+            "RouteTableId": {"Ref": "Route1"},
+            "DestinationCidrBlock": "0.0.0.0/0",
+            "GatewayId": { "Ref": "InternetGateway" }
+          }
+        },
+        "RouteTableAssociationPublic2A": {
+          "Type": "AWS::EC2::SubnetRouteTableAssociation",
+          "Properties": {
+            "SubnetId": {"Ref": "PublicSubnet2A"},
+            "RouteTableId": {"Ref": "Route1"}
+          }
+        },
+ 
+        "RouteTableAssociationPublic2C": {
+          "Type": "AWS::EC2::SubnetRouteTableAssociation",
+          "Properties": {
+            "SubnetId": {"Ref": "PublicSubnet2C"},
+            "RouteTableId": {"Ref": "Route1"}
+          }
+        },
+
+        "NATGateway2A": {
+          "DependsOn": "AttachInternetGateway",
+          "Type": "AWS::EC2::NatGateway",
+          "Metadata":{
+            "Comment": "Creates NAT Gateway to enable isntances in private subnet to connect to internet or other AWS services"
+					},
+          "Properties": {
+            "AllocationId": {"Fn::GetAtt" : ["EIP2A", "AllocationId"]},
+            "SubnetId": {"Ref" : "PublicSubnet2A"}
+          }
+        },
+        
+        "EIP2A": {
+          "Type": "AWS::EC2::EIP",
+          "Properties": {
+            "Domain": { "Ref": "EnvName" }
+          }
+        },
+        
+        "Route2A": {
+          "Type": "AWS::EC2::RouteTable",
+          "Properties": {
+            "VpcId": { "Ref": "VPC"},
+            "Tags": [
+                {"Key": "Environment", "Value": {"Ref": "EnvName"}},
+                {"Key": "Role", "Value":"private-network"},
+                {"Key": "Name", "Value": { "Fn::Join": ["",["Route2A","-",{ "Ref": "EnvName"}]]}}
+            ]
+          }
+        },
+        
+        "NATGatewayRoute2A": {
+          "Type": "AWS::EC2::Route",
+          "Properties": {
+            "RouteTableId": { "Ref" : "Route2A" },
+            "DestinationCidrBlock": "0.0.0.0/0",
+            "NatGatewayId" : { "Ref" : "NATGateway2A" }
+          }
+        },
+        
+        "RouteTableAssociationPrivate1A": {
+          "Type": "AWS::EC2::SubnetRouteTableAssociation",
+          "Properties": {
+            "SubnetId": {"Ref": "PrivateSubnet1A"},
+            "RouteTableId": {"Ref": "Route2A"}
+          }
+        },
+        "RouteTableAssociationPrivate2A": {
+          "Type": "AWS::EC2::SubnetRouteTableAssociation",
+          "Properties": {
+            "SubnetId": {"Ref": "PrivateSubnet2A"},
+            "RouteTableId": {"Ref": "Route2A"}
+          }
+        },
+        "RouteTableAssociationPrivate3A": {
+          "Type": "AWS::EC2::SubnetRouteTableAssociation",
+          "Properties": {
+            "SubnetId": {"Ref": "PrivateSubnet3A"},
+            "RouteTableId": {"Ref": "Route2A"}
+          }
+        },
+
+        "NATGateway2C": {
+          "DependsOn": "AttachInternetGateway",
+          "Type": "AWS::EC2::NatGateway",
+          "Metadata":{
+            "Comment": "Creates NAT Gateway to enable isntances in private subnet to connect to internet or other AWS services"
+					},
+          "Properties": {
+            "AllocationId": {"Fn::GetAtt" : ["EIP2C", "AllocationId"]},
+            "SubnetId": {"Ref" : "PublicSubnet2C"}
+          }
+        },
+        
+        "EIP2C": {
+          "Type": "AWS::EC2::EIP",
+          "Properties": {
+            "Domain": { "Ref": "EnvName" }
+          }
+        },
+        
+        "Route2C": {
+          "Type": "AWS::EC2::RouteTable",
+          "Properties": {
+            "VpcId": { "Ref": "VPC"},
+            "Tags": [
+                {"Key": "Environment", "Value": {"Ref": "EnvName"}},
+                {"Key": "Role", "Value":"private-network"},
+                {"Key": "Name", "Value": { "Fn::Join": ["",["Route2C","-",{ "Ref": "EnvName"}]]}}
+            ]
+          }
+        },
+        "NATGatewayRoute2C": {
+          "Type": "AWS::EC2::Route",
+          "Properties": {
+            "RouteTableId": { "Ref" : "Route2C" },
+            "DestinationCidrBlock": "0.0.0.0/0",
+            "NatGatewayId" : { "Ref" : "NATGateway2C" }
+          }
+        },
+        
+        "RouteTableAssociationPrivate1C": {
+          "Type": "AWS::EC2::SubnetRouteTableAssociation",
+          "Properties": {
+            "SubnetId": {"Ref": "PrivateSubnet1C"},
+            "RouteTableId": {"Ref": "Route2C"}
+          }
+        },
+        "RouteTableAssociationPrivate2C": {
+          "Type": "AWS::EC2::SubnetRouteTableAssociation",
+          "Properties": {
+            "SubnetId": {"Ref": "PrivateSubnet2C"},
+            "RouteTableId": {"Ref": "Route2C"}
+          }
+        }   
+    },
+
+    "Outputs": {
+  	  	"VpcID": {
+	  	    	"Value": { "Ref": "VPC"},
+            "Export": { "Name": {"Fn::Sub": "${AWS::StackName}-ID" }}
+        },
+        "VPC": {
+            "Description": "VPC ID ",
+            "Value": {"Ref": "VPC"},
+            "Export": {"Name": { "Fn::Join": ["",[{ "Ref": "EnvName"},"-","VPC-ID"]]}}
+        },
+        "VpcCidr":{
+            "Description": "VPC Cidr Block ",
+            "Value": {"Fn::GetAtt": [ "VPC" ,"CidrBlock"]},
+            "Export": {"Name": { "Fn::Join": ["",[{ "Ref": "EnvName"},"-","CidrBlock"]]}}
+        },
+        "Route1": {
+            "Description": "Route Connected to InternetGateway",
+            "Value": {"Ref": "Route1"},
+            "Export": {"Name": { "Fn::Join": ["",[{ "Ref": "EnvName"},"-","RouteTable1-ID"]]}}
+        },
+        "NatEIP2A": {
+          "Description": "NatGateway Connected Elastic IP",
+          "Value": { "Fn::Join": ["",[{"Ref":"EIP2A"},"/","32"]]},
+          "Export": {"Name": { "Fn::Join": ["",[{ "Ref": "EnvName"},"-","NAT-EIP-2A"]]}}
+        },
+        "NatEIP2C": {
+          "Description": "NatGateway Connected Elastic IP",
+          "Value": { "Fn::Join": ["",[{"Ref":"EIP2C"},"/","32"]]},
+          "Export": {"Name": { "Fn::Join": ["",[{ "Ref": "EnvName"},"-","NAT-EIP-2C"]]}}
+        },
+        "Route2A": {
+            "Description": "Route Connected to NAT Gateway",
+            "Value": {"Ref": "Route2A"},
+            "Export": {"Name": { "Fn::Join": ["",[{ "Ref": "EnvName"},"-","RouteTable2A-ID"]]}}
+        },
+        "Route2C": {
+            "Description": "Route Connected to NAT Gateway",
+            "Value": {"Ref": "Route2C"},
+            "Export": {"Name": { "Fn::Join": ["",[{ "Ref": "EnvName"},"-","RouteTable2C-ID"]]}}
+        },
+        "PublicSubnet2A":{
+          "Description": "Subnet Connected to IGW",
+          "Value": {"Ref": "PublicSubnet2A"},
+          "Export": {"Name": { "Fn::Join": ["",[{ "Ref": "EnvName"},"-","PubSubnet2A-ID"]]}}
+        },
+        "PublicSubnet2C":{
+          "Description": "Subnet Connected to IGW",
+          "Value": {"Ref": "PublicSubnet2C"},
+          "Export": {"Name": { "Fn::Join": ["",[{ "Ref": "EnvName"},"-","PubSubnet2C-ID"]]}}
+        },
+        "PrivateSubnet1A":{
+          "Description": "Subnet Connected to Natgateway",
+          "Value": {"Ref": "PrivateSubnet1A"},
+          "Export": {"Name": { "Fn::Join": ["",[{ "Ref": "EnvName"},"-","PvtSubnet1A-ID"]]}}
+        },
+        "PrivateSubnet1C":{
+          "Description": "Subnet Connected to Natgateway",
+          "Value": {"Ref": "PrivateSubnet1C"},
+          "Export": {"Name": { "Fn::Join": ["",[{ "Ref": "EnvName"},"-","PvtSubnet1C-ID"]]}}
+        },
+        "PrivateSubnet2A":{
+          "Description": "Subnet Connected to Natgateway",
+          "Value": {"Ref": "PrivateSubnet2A"},
+          "Export": {"Name": { "Fn::Join": ["",[{ "Ref": "EnvName"},"-","PvtSubnet2A-ID"]]}}
+        },
+        "PrivateSubnet2C":{
+          "Description": "Subnet Connected to Natgateway",
+          "Value": {"Ref": "PrivateSubnet2C"},
+          "Export": {"Name": { "Fn::Join": ["",[{ "Ref": "EnvName"},"-","PvtSubnet2C-ID"]]}}
+        },
+        "PrivateSubnet3A":{
+          "Description": "Subnet Connected to Natgateway",
+          "Value": {"Ref": "PrivateSubnet3A"},
+          "Export": {"Name": { "Fn::Join": ["",[{ "Ref": "EnvName"},"-","PvtSubnet3A-ID"]]}}
+        }
+    }
+}

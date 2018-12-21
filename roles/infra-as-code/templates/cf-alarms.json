@@ -1,0 +1,1430 @@
+
+{
+    "AWSTemplateFormatVersion": "2010-09-09",
+    "Description": "Alarms for CPU,memory and disk space utilization",
+    "Metadata": {
+        "About": {
+            "Author": {"value": "DevOps Engineering Team"},
+            "Contact": {"Value": "cwdsdevopsengineering@osi.ca.gov"},
+            "CreatedDate": {"Value": "May 22, 2018"},
+            "UpdatedDate": {"Value": "{{ansible_date_time.date}}"}
+        }
+    },
+    "Parameters": {
+        "EnvName": {
+            "Description": "Environment Name",
+            "Type": "String"
+        },
+        "CriticalWarning": {
+            "Description": "SNS for Critical Warning",
+            "Type" : "String"
+        },
+        "EnvironmentType": {
+            "Description": "Docker or non docker environment",
+            "Type": "String"
+        },
+        "InternalWebGatewayAInstanceId": {
+            "Description": "Web Server Ec2 instance",
+            "Type": "String"
+        },
+        "InternalWebGatewayCInstanceId": {
+            "Description": "Web Server Ec2 instance",
+            "Type": "String"
+        },
+        "AppServerAInstanceId": {
+            "Description": "APP Server EnvName Ec2 instance",
+            "Type": "String"
+        },
+        "AppServerCInstanceId": {
+            "Description": "APP Server EnvName Ec2 instance",
+            "Type": "String"
+        },
+        "PerryServerAInstanceId": {
+            "Description": "Perry Server Ec2 instance",
+            "Type": "String"
+        },
+        "PerryServerCInstanceId": {
+            "Description": "Perry Server Ec2 instance",
+            "Type": "String"
+        },
+        "ApiServerAInstanceId": {
+            "Description": "API Server EnvName Ec2 instance",
+            "Type": "String"
+        },
+        "ApiServerCInstanceId": {
+            "Description": "API Server EnvName Ec2 instance",
+            "Type": "String"
+        },
+        "RundeckServerAInstanceId": {
+            "Description": "Rundeck Server Ec2 instance",
+            "Type": "String"
+        },
+        "JenkinsInstanceId": {
+            "Description": "Jenkins Server Ec2 instance",
+            "Type": "String"
+        },
+        "DB2AInstanceId": {
+            "Description": "db2 EC2 INSTANCE",
+            "Type": "String"
+        },
+        "PostgreSQLAInstanceId": {
+            "Description": "postgres EC2 INSTANCE",
+            "Type": "String"
+        },
+        "ElasticSearchInstanceId": {
+            "Description": "ElasticSearch Server Ec2 instance",
+            "Type": "String"
+        },
+        "createES1node": {
+            "Description": "Condition to create single node ES",
+            "Type": "String"
+        }
+
+    
+    },
+    "Conditions": {
+        "create-rds-alarms": {"Fn::Equals": [{"Ref": "EnvironmentType"}, "nondocker"]},
+        "create-db-alarms": {"Fn::Equals": [{"Ref": "EnvironmentType"}, "docker"]},
+        "createES1node": {"Fn::Equals": [{"Ref": "createES1node"}, "true"]}
+    },
+    "Resources": {
+        "WebGateway1aCPUInitialWarning": {
+           "Type": "AWS::CloudWatch::Alarm",
+           "Properties": {
+              "MetricName": "CPUUtilization",
+              "Namespace": "AWS/EC2",
+              "ComparisonOperator": "GreaterThanThreshold",
+              "EvaluationPeriods": "2",
+              "Period": "60",
+              "Statistic": "Average",
+              "Threshold": "75",
+              "AlarmDescription": "Server WebGateway-1a CPU Alarm Initial Warning - Server Exceeding CPU Initial Threshold limit 75%",
+              "AlarmName": { "Fn::Join": ["",[{"Ref": "EnvName"},"-","Webgateway1a","-","CPU","-","InitialWarning"]]},
+              "Dimensions": [ { "Name": "InstanceId", "Value": {"Ref": "InternalWebGatewayAInstanceId"} }]
+           }
+        },
+        "WebGateway1CCPUInitialWarning": {
+           "Type": "AWS::CloudWatch::Alarm",
+           "Properties": {
+              "MetricName": "CPUUtilization",
+              "Namespace": "AWS/EC2",
+              "ComparisonOperator": "GreaterThanThreshold",
+              "EvaluationPeriods": "2",
+              "Period": "60",
+              "Statistic": "Average",
+              "Threshold": "75",
+              "AlarmDescription": "Server WebGateway-1c CPU Alarm Initial Warning - Server Exceeding CPU Initial Threshold limit 75%",
+              "AlarmName": { "Fn::Join": ["",[{"Ref": "EnvName"},"-","Webgateway1c","-","CPU","-","InitialWarning"]]},
+              "Dimensions": [ { "Name": "InstanceId", "Value": {"Ref": "InternalWebGatewayCInstanceId"} }]
+           }
+        },
+        "AppServer1aCPUInitialWarning": {
+           "Type": "AWS::CloudWatch::Alarm",
+           "Properties": {
+              "MetricName": "CPUUtilization",
+              "Namespace": "AWS/EC2",
+              "ComparisonOperator": "GreaterThanThreshold",
+              "EvaluationPeriods": "2",
+              "Period": "60",
+              "Statistic": "Average",
+              "Threshold": "75",
+              "AlarmDescription": "App Server EnvName CPU Alarm Initial Warning - Server Exceeding CPU Initial Threshold limit 75%",
+              "AlarmName": { "Fn::Join": ["",[{"Ref": "EnvName"},"-","App1a","-","CPU","-","InitialWarning"]]},
+              "Dimensions": [ { "Name": "InstanceId", "Value": {"Ref": "AppServerAInstanceId"} }]
+           }
+        },
+        "AppServer1cCPUInitialWarning": {
+           "Type": "AWS::CloudWatch::Alarm",
+           "Properties": {
+              "MetricName": "CPUUtilization",
+              "Namespace": "AWS/EC2",
+              "ComparisonOperator": "GreaterThanThreshold",
+              "EvaluationPeriods": "2",
+              "Period": "60",
+              "Statistic": "Average",
+              "Threshold": "75",
+              "AlarmDescription": "App Server EnvName CPU Alarm Initial Warning - Server Exceeding CPU Initial Threshold limit 75%",
+              "AlarmName": { "Fn::Join": ["",[{"Ref": "EnvName"},"-","App1c","-","CPU","-","InitialWarning"]]},
+              "Dimensions": [ { "Name": "InstanceId", "Value": {"Ref": "AppServerCInstanceId"} }]
+           }
+        },
+        "Perry1aCPUInitialWarning": {
+           "Type": "AWS::CloudWatch::Alarm",
+           "Properties": {
+              "MetricName": "CPUUtilization",
+              "Namespace": "AWS/EC2",
+              "ComparisonOperator": "GreaterThanThreshold",
+              "EvaluationPeriods": "2",
+              "Period": "60",
+              "Statistic": "Average",
+              "Threshold": "75",
+              "AlarmDescription": "Server Perry-1a CPU Alarm Initial Warning - Server Exceeding CPU Initial Threshold limit 75%",
+              "AlarmName": { "Fn::Join": ["",[{"Ref": "EnvName"},"-","Perry1a","-","CPU","-","InitialWarning"]]},
+              "Dimensions": [ { "Name": "InstanceId", "Value": {"Ref": "PerryServerAInstanceId"} }]
+           }
+        },
+        "Perry1cCPUInitialWarning": {
+           "Type": "AWS::CloudWatch::Alarm",
+           "Properties": {
+              "MetricName": "CPUUtilization",
+              "Namespace": "AWS/EC2",
+              "ComparisonOperator": "GreaterThanThreshold",
+              "EvaluationPeriods": "2",
+              "Period": "60",
+              "Statistic": "Average",
+              "Threshold": "75",
+              "AlarmDescription": "Server Perry-1c CPU Alarm Initial Warning - Server Exceeding CPU Initial Threshold limit 75%",
+              "AlarmName": { "Fn::Join": ["",[{"Ref": "EnvName"},"-","Perry1c","-","CPU","-","InitialWarning"]]},
+              "Dimensions": [ { "Name": "InstanceId", "Value": {"Ref": "PerryServerCInstanceId"} }]
+           }
+        },
+       "Api1aCPUInitialWarning": {
+           "Type": "AWS::CloudWatch::Alarm",
+           "Properties": {
+              "MetricName": "CPUUtilization",
+              "Namespace": "AWS/EC2",
+              "ComparisonOperator": "GreaterThanThreshold",
+              "EvaluationPeriods": "2",
+              "Period": "60",
+              "Statistic": "Average",
+              "Threshold": "75",
+              "AlarmDescription": "Api Server CPU Alarm Initial Warning - Server Exceeding CPU Initial Threshold limit 75%",
+              "AlarmName": { "Fn::Join": ["",[{"Ref": "EnvName"},"-","Api1a","-","CPU","-","InitialWarning"]]},
+              "Dimensions": [ { "Name": "InstanceId", "Value": {"Ref": "ApiServerAInstanceId"} }]
+           }
+        },
+        "Api1cCPUInitialWarning": {
+           "Type": "AWS::CloudWatch::Alarm",
+           "Properties": {
+              "MetricName": "CPUUtilization",
+              "Namespace": "AWS/EC2",
+              "ComparisonOperator": "GreaterThanThreshold",
+              "EvaluationPeriods": "2",
+              "Period": "60",
+              "Statistic": "Average",
+              "Threshold": "75",
+              "AlarmDescription": "Api Server CPU Alarm Initial Warning - Server Exceeding CPU Initial Threshold limit 75%",
+              "AlarmName": { "Fn::Join": ["",[{"Ref": "EnvName"},"-","Api1c","-","CPU","-","InitialWarning"]]},
+              "Dimensions": [ { "Name": "InstanceId", "Value": {"Ref": "ApiServerCInstanceId"} }]
+           }
+        },
+        "Rundeck1aCPUInitialWarning": {
+           "Type": "AWS::CloudWatch::Alarm",
+           "Properties": {
+              "MetricName": "CPUUtilization",
+              "Namespace": "AWS/EC2",
+              "ComparisonOperator": "GreaterThanThreshold",
+              "EvaluationPeriods": "2",
+              "Period": "60",
+              "Statistic": "Average",
+              "Threshold": "75",
+              "AlarmDescription": "Server Rundeck CPU Alarm Initial Warning - Server Exceeding CPU Initial Threshold limit 75%",
+              "AlarmName": { "Fn::Join": ["",[{"Ref": "EnvName"},"-","Rundeck","-","CPU","-","InitialWarning"]]},
+              "Dimensions": [ { "Name": "InstanceId", "Value": {"Ref": "RundeckServerAInstanceId"} }]
+           }
+        },
+        "JenkinsCPUInitialWarning": {
+           "Type": "AWS::CloudWatch::Alarm",
+           "Properties": {
+              "MetricName": "CPUUtilization",
+              "Namespace": "AWS/EC2",
+              "ComparisonOperator": "GreaterThanThreshold",
+              "EvaluationPeriods": "2",
+              "Period": "60",
+              "Statistic": "Average",
+              "Threshold": "75",
+              "AlarmDescription": "Server Jenkins-SlaveNode CPU Alarm Initial Warning - Server Exceeding CPU Initial Threshold limit 75%",
+              "AlarmName": { "Fn::Join": ["",[{"Ref": "EnvName"},"-","Jenkins","-","CPU","-","InitialWarning"]]},
+              "Dimensions": [ { "Name": "InstanceId", "Value": {"Ref": "JenkinsInstanceId"} }]
+           }
+        },
+        "DB2ACPUInitialWarning": {
+           "Type": "AWS::CloudWatch::Alarm",
+           "Condition": "create-db-alarms",
+           "Properties": {
+              "MetricName": "CPUUtilization",
+              "Namespace": "AWS/EC2",
+              "ComparisonOperator": "GreaterThanThreshold",
+              "EvaluationPeriods": "2",
+              "Period": "60",
+              "Statistic": "Average",
+              "Threshold": "75",
+              "AlarmDescription": "Server db2-1a CPU Alarm Initial Warning - Server Exceeding CPU Initial Threshold limit 75%",
+              "AlarmName": { "Fn::Join": ["",[{"Ref": "EnvName"},"-","DB2a","-","CPU","-","InitialWarning"]]},
+              "Dimensions": [ { "Name": "InstanceId", "Value": {"Ref": "DB2AInstanceId"} }]
+           }
+        },
+        "PostgreSQLAInitialWarning": {
+           "Type": "AWS::CloudWatch::Alarm",
+           "Condition": "create-db-alarms",
+           "Properties": {
+              "MetricName": "CPUUtilization",
+              "Namespace": "AWS/EC2",
+              "ComparisonOperator": "GreaterThanThreshold",
+              "EvaluationPeriods": "2",
+              "Period": "60",
+              "Statistic": "Average",
+              "Threshold": "75",
+              "AlarmDescription": "Server PostgreSQL C CPU Alarm Initial Warning - Server Exceeding CPU Initial Threshold limit 75%",
+              "AlarmName": { "Fn::Join": ["",[{"Ref": "EnvName"},"-","PostgreSQLA","-","CPU","-","InitialWarning"]]},
+              "Dimensions": [ { "Name": "InstanceId", "Value": {"Ref": "PostgreSQLAInstanceId"} }]
+           }
+        },
+        "ElasticSearchCPUInitialWarning": {
+           "Type": "AWS::CloudWatch::Alarm",
+           "Condition": "createES1node",
+           "Properties": {
+              "MetricName": "CPUUtilization",
+              "Namespace": "AWS/EC2",
+              "ComparisonOperator": "GreaterThanThreshold",
+              "EvaluationPeriods": "2",
+              "Period": "60",
+              "Statistic": "Average",
+              "Threshold": "75",
+              "AlarmDescription": "Server ElasticSearch CPU Alarm Initial Warning - Server Exceeding CPU Initial Threshold limit 75%",
+              "AlarmName": { "Fn::Join": ["",[{"Ref": "EnvName"},"-","ElasticSearch","-","CPU","-","InitialWarning"]]},
+              "Dimensions": [ { "Name": "InstanceId", "Value": {"Ref": "ElasticSearchInstanceId"} }]
+           }
+        },
+
+
+        "WebGateway1aCPUCriticalWarning": {
+           "Type": "AWS::CloudWatch::Alarm",
+           "Properties": {
+              "MetricName": "CPUUtilization",
+              "Namespace": "AWS/EC2",
+              "ComparisonOperator": "GreaterThanThreshold",
+              "EvaluationPeriods": "1",
+              "Period": "60",
+              "Statistic": "Average",
+              "Threshold": "90",
+              "AlarmActions": [{"Ref": "CriticalWarning"}],
+              "AlarmDescription": "Server WebGateway-1a CPU Alarm Critical Warning - Server Exceeding CPU Critical Threshold limit 90%",
+              "AlarmName": { "Fn::Join": ["",[{"Ref": "EnvName"},"-","Webgateway1a","-","CPU","-","CriticalWarning"]]},
+              "Dimensions": [ { "Name": "InstanceId", "Value": {"Ref": "InternalWebGatewayAInstanceId"} }]
+           }
+        },
+        "WebGateway1CCPUCriticalWarning": {
+           "Type": "AWS::CloudWatch::Alarm",
+           "Properties": {
+              "MetricName": "CPUUtilization",
+              "Namespace": "AWS/EC2",
+              "ComparisonOperator": "GreaterThanThreshold",
+              "EvaluationPeriods": "1",
+              "Period": "60",
+              "Statistic": "Average",
+              "Threshold": "90",
+              "AlarmActions": [{"Ref": "CriticalWarning"}],
+              "AlarmDescription": "Server WebGateway-1c CPU Alarm Critical Warning - Server Exceeding CPU Critical Threshold limit 90%",
+              "AlarmName": { "Fn::Join": ["",[{"Ref": "EnvName"},"-","Webgateway1c","-","CPU","-","CriticalWarning"]]},
+              "Dimensions": [ { "Name": "InstanceId", "Value": {"Ref": "InternalWebGatewayCInstanceId"} }]
+           }
+        },
+        "AppServer1aCPUCriticalWarning": {
+           "Type": "AWS::CloudWatch::Alarm",
+           "Properties": {
+              "MetricName": "CPUUtilization",
+              "Namespace": "AWS/EC2",
+              "ComparisonOperator": "GreaterThanThreshold",
+              "EvaluationPeriods": "1",
+              "Period": "60",
+              "Statistic": "Average",
+              "Threshold": "90",
+              "AlarmActions": [{"Ref": "CriticalWarning"}],
+              "AlarmDescription": "App Server EnvName CPU Alarm Critical Warning - Server Exceeding CPU Critical Threshold limit 90%",
+              "AlarmName": { "Fn::Join": ["",[{"Ref": "EnvName"},"-","App1a","-","CPU","-","CriticalWarning"]]},
+              "Dimensions": [ { "Name": "InstanceId", "Value": {"Ref": "AppServerAInstanceId"} }]
+           }
+        },
+        "AppServer1cCPUCriticalWarning": {
+           "Type": "AWS::CloudWatch::Alarm",
+           "Properties": {
+              "MetricName": "CPUUtilization",
+              "Namespace": "AWS/EC2",
+              "ComparisonOperator": "GreaterThanThreshold",
+              "EvaluationPeriods": "1",
+              "Period": "60",
+              "Statistic": "Average",
+              "Threshold": "90",
+              "AlarmActions": [{"Ref": "CriticalWarning"}],
+              "AlarmDescription": "App Server EnvName CPU Alarm Critical Warning - Server Exceeding CPU Critical Threshold limit 90%",
+              "AlarmName": { "Fn::Join": ["",[{"Ref": "EnvName"},"-","App1c","-","CPU","-","CriticalWarning"]]},
+              "Dimensions": [ { "Name": "InstanceId", "Value": {"Ref": "AppServerCInstanceId"} }]
+           }
+        },
+
+        "Perry1aCPUCriticalWarning": {
+           "Type": "AWS::CloudWatch::Alarm",
+           "Properties": {
+              "MetricName": "CPUUtilization",
+              "Namespace": "AWS/EC2",
+              "ComparisonOperator": "GreaterThanThreshold",
+              "EvaluationPeriods": "1",
+              "Period": "60",
+              "Statistic": "Average",
+              "Threshold": "90",
+              "AlarmActions": [{"Ref": "CriticalWarning"}],
+              "AlarmDescription": "Server Perry-1a CPU Alarm Critical Warning - Server Exceeding CPU Critical Threshold limit 90%",
+              "AlarmName": { "Fn::Join": ["",[{"Ref": "EnvName"},"-","Perry1a","-","CPU","-","CriticalWarning"]]},
+              "Dimensions": [ { "Name": "InstanceId", "Value": {"Ref": "PerryServerAInstanceId"} }]
+           }
+        },
+        "Perry1cCPUCriticalWarning": {
+           "Type": "AWS::CloudWatch::Alarm",
+           "Properties": {
+              "MetricName": "CPUUtilization",
+              "Namespace": "AWS/EC2",
+              "ComparisonOperator": "GreaterThanThreshold",
+              "EvaluationPeriods": "1",
+              "Period": "60",
+              "Statistic": "Average",
+              "Threshold": "90",
+              "AlarmActions": [{"Ref": "CriticalWarning"}],
+              "AlarmDescription": "Server Perry-1c CPU Alarm Critical Warning - Server Exceeding CPU Critical Threshold limit 90%",
+              "AlarmName": { "Fn::Join": ["",[{"Ref": "EnvName"},"-","Perry1c","-","CPU","-","CriticalWarning"]]},
+              "Dimensions": [ { "Name": "InstanceId", "Value": {"Ref": "PerryServerCInstanceId"} }]
+           }
+        },
+        "Api1aCPUCriticalWarning": {
+           "Type": "AWS::CloudWatch::Alarm",
+           "Properties": {
+              "MetricName": "CPUUtilization",
+              "Namespace": "AWS/EC2",
+              "ComparisonOperator": "GreaterThanThreshold",
+              "EvaluationPeriods": "1",
+              "Period": "60",
+              "Statistic": "Average",
+              "Threshold": "90",
+              "AlarmActions": [{"Ref": "CriticalWarning"}],
+              "AlarmDescription": "ApiServer (Cals/Intake) CPU Alarm Critical Warning - Server Exceeding CPU Critical Threshold limit 90%",
+              "AlarmName": { "Fn::Join": ["",[{"Ref": "EnvName"},"-","Api1a","-","CPU","-","CriticalWarning"]]},
+              "Dimensions": [ { "Name": "InstanceId", "Value": {"Ref": "ApiServerAInstanceId"} }]
+           }
+        },
+        "Api1cCPUCriticalWarning": {
+           "Type": "AWS::CloudWatch::Alarm",
+           "Properties": {
+              "MetricName": "CPUUtilization",
+              "Namespace": "AWS/EC2",
+              "ComparisonOperator": "GreaterThanThreshold",
+              "EvaluationPeriods": "1",
+              "Period": "60",
+              "Statistic": "Average",
+              "Threshold": "90",
+              "AlarmActions": [{"Ref": "CriticalWarning"}],
+              "AlarmDescription": "ApiServer EnvName CPU Alarm Critical Warning - Server Exceeding CPU Critical Threshold limit 90%",
+              "AlarmName": { "Fn::Join": ["",[{"Ref": "EnvName"},"-","Api1c","-","CPU","-","CriticalWarning"]]},
+              "Dimensions": [ { "Name": "InstanceId", "Value": {"Ref": "ApiServerCInstanceId"} }]
+           }
+        },
+        "Rundeck1aCPUCriticalWarning": {
+           "Type": "AWS::CloudWatch::Alarm",
+           "Properties": {
+              "MetricName": "CPUUtilization",
+              "Namespace": "AWS/EC2",
+              "ComparisonOperator": "GreaterThanThreshold",
+              "EvaluationPeriods": "1",
+              "Period": "60",
+              "Statistic": "Average",
+              "Threshold": "90",
+              "AlarmActions": [{"Ref": "CriticalWarning"}],
+              "AlarmDescription": "Server Rundeck CPU Alarm Critical Warning - Server Exceeding CPU Critical Threshold limit 90%",
+              "AlarmName": { "Fn::Join": ["",[{"Ref": "EnvName"},"-","Rundeck","-","CPU","-","CriticalWarning"]]},
+              "Dimensions": [ { "Name": "InstanceId", "Value": {"Ref": "RundeckServerAInstanceId"} }]
+           }
+        },
+        "JenkinsCPUCriticalWarning": {
+           "Type": "AWS::CloudWatch::Alarm",
+           "Properties": {
+              "MetricName": "CPUUtilization",
+              "Namespace": "AWS/EC2",
+              "ComparisonOperator": "GreaterThanThreshold",
+              "EvaluationPeriods": "1",
+              "Period": "60",
+              "Statistic": "Average",
+              "Threshold": "90",
+              "AlarmActions": [{"Ref": "CriticalWarning"}],
+              "AlarmDescription": "Server Jenkins-SlaveNode CPU Alarm Critical Warning - Server Exceeding CPU Critical Threshold limit 90%",
+              "AlarmName": { "Fn::Join": ["",[{"Ref": "EnvName"},"-","Jenkins","-","CPU","-","CriticalWarning"]]},
+              "Dimensions": [ { "Name": "InstanceId", "Value": {"Ref": "JenkinsInstanceId"} }]
+           }
+        },
+        "DB2ACPUCriticalWarning": {
+           "Type": "AWS::CloudWatch::Alarm",
+           "Condition": "create-db-alarms",
+           "Properties": {
+              "MetricName": "CPUUtilization",
+              "Namespace": "AWS/EC2",
+              "ComparisonOperator": "GreaterThanThreshold",
+              "EvaluationPeriods": "1",
+              "Period": "60",
+              "Statistic": "Average",
+              "Threshold": "90",
+              "AlarmActions": [{"Ref": "CriticalWarning"}],
+              "AlarmDescription": "Server db2 A CPU Alarm Critical Warning - Server Exceeding CPU Initial Threshold limit 90%",
+              "AlarmName": { "Fn::Join": ["",[{"Ref": "EnvName"},"-","DB2a","-","CPU","-","CriticalWarning"]]},
+              "Dimensions": [ { "Name": "InstanceId", "Value": {"Ref": "DB2AInstanceId"} }]
+           }
+        },
+        "PostgreSQLACriticalWarning": {
+           "Type": "AWS::CloudWatch::Alarm",
+           "Condition": "create-db-alarms",
+           "Properties": {
+              "MetricName": "CPUUtilization",
+              "Namespace": "AWS/EC2",
+              "ComparisonOperator": "GreaterThanThreshold",
+              "EvaluationPeriods": "1",
+              "Period": "60",
+              "Statistic": "Average",
+              "Threshold": "90",
+              "AlarmActions": [{"Ref": "CriticalWarning"}],
+              "AlarmDescription": "Server PostgreSQL C CPU Alarm Initial Warning - Server Exceeding CPU Initial Threshold limit 90%",
+              "AlarmName": { "Fn::Join": ["",[{"Ref": "EnvName"},"-","PostgreSQLA","-","CPU","-","CriticalWarning"]]},
+              "Dimensions": [ { "Name": "InstanceId", "Value": {"Ref": "PostgreSQLAInstanceId"} }]
+           }
+        },
+        "ElasticSearchCPUCriticalWarning": {
+           "Type": "AWS::CloudWatch::Alarm",
+           "Condition": "createES1node",
+           "Properties": {
+              "MetricName": "CPUUtilization",
+              "Namespace": "AWS/EC2",
+              "ComparisonOperator": "GreaterThanThreshold",
+              "EvaluationPeriods": "1",
+              "Period": "60",
+              "Statistic": "Average",
+              "Threshold": "90",
+              "AlarmDescription": "Server ElasticSearch CPU Alarm Critical Warning - Server Exceeding CPU Critical Threshold limit 90%",
+              "AlarmName": { "Fn::Join": ["",[{"Ref": "EnvName"},"-","ElasticSearch","-","CPU","-","CriticalWarning"]]},
+              "Dimensions": [ { "Name": "InstanceId", "Value": {"Ref": "ElasticSearchInstanceId"} }]
+           }
+        },
+
+
+        "WebGateway1aMemoryUtilizationInitialWarning": {
+           "Type": "AWS::CloudWatch::Alarm",
+           "Properties": {
+              "MetricName": "MemoryUtilization",
+              "Namespace": "System/Linux",
+              "ComparisonOperator": "GreaterThanThreshold",
+              "EvaluationPeriods": "2",
+              "Period": "60",
+              "Statistic": "Average",
+              "Threshold": "75",
+              "AlarmDescription": "Server WebGateway-1a MemoryUtilization Alarm Initial Warning - Server Exceeding MemoryUtilization Initial Threshold limit 75%",
+              "AlarmName": { "Fn::Join": ["",[{"Ref": "EnvName"},"-","WebGateway1a","-","MemoryUtilization-","-","InitialWarning"]]},
+              "Dimensions": [ { "Name": "InstanceId", "Value": {"Ref": "InternalWebGatewayAInstanceId"} }]
+           }
+        },
+        "WebGateway1cMemoryUtilizationInitialWarning": {
+           "Type": "AWS::CloudWatch::Alarm",
+           "Properties": {
+              "MetricName": "MemoryUtilization",
+              "Namespace": "System/Linux",
+              "ComparisonOperator": "GreaterThanThreshold",
+              "EvaluationPeriods": "2",
+              "Period": "60",
+              "Statistic": "Average",
+              "Threshold": "75",
+              "AlarmDescription": "Server WebGateway-1c MemoryUtilization Alarm Initial Warning - Server Exceeding MemoryUtilization Initial Threshold limit 75%",
+              "AlarmName": { "Fn::Join": ["",[{"Ref": "EnvName"},"-","WebGateway1c","-","MemoryUtilization-","-","InitialWarning"]]},
+              "Dimensions": [ { "Name": "InstanceId", "Value": {"Ref": "InternalWebGatewayCInstanceId"} }]
+           }
+        },
+        "AppServer1aMemoryUtilizationInitialWarning": {
+           "Type": "AWS::CloudWatch::Alarm",
+           "Properties": {
+              "MetricName": "MemoryUtilization",
+              "Namespace": "System/Linux",
+              "ComparisonOperator": "GreaterThanThreshold",
+              "EvaluationPeriods": "2",
+              "Period": "60",
+              "Statistic": "Average",
+              "Threshold": "75",
+              "AlarmDescription": "App Server EnvName MemoryUtilization Alarm Initial Warning - Server Exceeding MemoryUtilization Initial Threshold limit 75%",
+              "AlarmName": { "Fn::Join": ["",[{"Ref": "EnvName"},"-","App1a","-","MemoryUtilization-","-","InitialWarning"]]},
+              "Dimensions": [ { "Name": "InstanceId", "Value": {"Ref": "AppServerAInstanceId"} }]
+           }
+        },
+        "AppServer1cMemoryUtilizationInitialWarning": {
+           "Type": "AWS::CloudWatch::Alarm",
+           "Properties": {
+              "MetricName": "MemoryUtilization",
+              "Namespace": "System/Linux",
+              "ComparisonOperator": "GreaterThanThreshold",
+              "EvaluationPeriods": "2",
+              "Period": "60",
+              "Statistic": "Average",
+              "Threshold": "75",
+              "AlarmDescription": "App Server EnvName MemoryUtilization Alarm Initial Warning - Server Exceeding MemoryUtilization Initial Threshold limit 75%",
+              "AlarmName": { "Fn::Join": ["",[{"Ref": "EnvName"},"-","App1c","-","MemoryUtilization-","-","InitialWarning"]]},
+              "Dimensions": [ { "Name": "InstanceId", "Value": {"Ref": "AppServerCInstanceId"} }]
+           }
+        },
+        "Perry1aMemoryUtilizationInitialWarning": {
+           "Type": "AWS::CloudWatch::Alarm",
+           "Properties": {
+              "MetricName": "MemoryUtilization",
+              "Namespace": "System/Linux",
+              "ComparisonOperator": "GreaterThanThreshold",
+              "EvaluationPeriods": "2",
+              "Period": "60",
+              "Statistic": "Average",
+              "Threshold": "75",
+              "AlarmDescription": "Server Perry-1a MemoryUtilization Alarm Initial Warning - Server Exceeding MemoryUtilization Initial Threshold limit 75%",
+              "AlarmName": { "Fn::Join": ["",[{"Ref": "EnvName"},"-","Perry1a","-","MemoryUtilization-","-","InitialWarning"]]},
+              "Dimensions": [ { "Name": "InstanceId", "Value": {"Ref": "PerryServerAInstanceId"} }]
+           }
+        },
+        "Perry1cMemoryUtilizationInitialWarning": {
+           "Type": "AWS::CloudWatch::Alarm",
+           "Properties": {
+              "MetricName": "MemoryUtilization",
+              "Namespace": "System/Linux",
+              "ComparisonOperator": "GreaterThanThreshold",
+              "EvaluationPeriods": "2",
+              "Period": "60",
+              "Statistic": "Average",
+              "Threshold": "75",
+              "AlarmDescription": "Server Perry-1c MemoryUtilization Alarm Initial Warning - Server Exceeding MemoryUtilization Initial Threshold limit 75%",
+              "AlarmName": { "Fn::Join": ["",[{"Ref": "EnvName"},"-","Perry1c","-","MemoryUtilization-","-","InitialWarning"]]},
+              "Dimensions": [ { "Name": "InstanceId", "Value": {"Ref": "PerryServerCInstanceId"} }]
+           }
+        },
+        "Api1aMemoryUtilizationInitialWarning": {
+           "Type": "AWS::CloudWatch::Alarm",
+           "Properties": {
+              "MetricName": "MemoryUtilization",
+              "Namespace": "System/Linux",
+              "ComparisonOperator": "GreaterThanThreshold",
+              "EvaluationPeriods": "2",
+              "Period": "60",
+              "Statistic": "Average",
+              "Threshold": "75",
+              "AlarmDescription": "API Server EnvName MemoryUtilization Alarm Initial Warning - Server Exceeding MemoryUtilization Initial Threshold limit 75%",
+              "AlarmName": { "Fn::Join": ["",[{"Ref": "EnvName"},"-","Api1a","-","MemoryUtilization-","-","InitialWarning"]]},
+              "Dimensions": [ { "Name": "InstanceId", "Value": {"Ref": "ApiServerAInstanceId"} }]
+           }
+        },
+        "Api1cMemoryUtilizationInitialWarning": {
+           "Type": "AWS::CloudWatch::Alarm",
+           "Properties": {
+              "MetricName": "MemoryUtilization",
+              "Namespace": "System/Linux",
+              "ComparisonOperator": "GreaterThanThreshold",
+              "EvaluationPeriods": "2",
+              "Period": "60",
+              "Statistic": "Average",
+              "Threshold": "75",
+              "AlarmDescription": "API Server EnvName MemoryUtilization Alarm Initial Warning - Server Exceeding MemoryUtilization Initial Threshold limit 75%",
+              "AlarmName": { "Fn::Join": ["",[{"Ref": "EnvName"},"-","Api1c","-","MemoryUtilization-","-","InitialWarning"]]},
+              "Dimensions": [ { "Name": "InstanceId", "Value": {"Ref": "ApiServerCInstanceId"} }]
+           }
+        },
+        "Rundeck1aMemoryUtilizationInitialWarning": {
+           "Type": "AWS::CloudWatch::Alarm",
+           "Properties": {
+              "MetricName": "MemoryUtilization",
+              "Namespace": "System/Linux",
+              "ComparisonOperator": "GreaterThanThreshold",
+              "EvaluationPeriods": "2",
+              "Period": "60",
+              "Statistic": "Average",
+              "Threshold": "75",
+              "AlarmDescription": "Server Rundeck MemoryUtilization Alarm Initial Warning - Server Exceeding MemoryUtilization Initial Threshold limit 75%",
+              "AlarmName": { "Fn::Join": ["",[{"Ref": "EnvName"},"-","Rundeck","-","MemoryUtilization-","-","InitialWarning"]]},
+              "Dimensions": [ { "Name": "InstanceId", "Value": {"Ref": "RundeckServerAInstanceId"} }]
+           }
+        },
+        "JenkinsMemoryUtilizationInitialWarning": {
+           "Type": "AWS::CloudWatch::Alarm",
+           "Properties": {
+              "MetricName": "MemoryUtilization",
+              "Namespace": "System/Linux",
+              "ComparisonOperator": "GreaterThanThreshold",
+              "EvaluationPeriods": "2",
+              "Period": "60",
+              "Statistic": "Average",
+              "Threshold": "75",
+              "AlarmDescription": "Server Jenkins-SlaveNode MemoryUtilization Alarm Initial Warning - Server Exceeding MemoryUtilization Initial Threshold limit 75%",
+              "AlarmName": { "Fn::Join": ["",[{"Ref": "EnvName"},"-","Jenkins","-","MemoryUtilization-","-","InitialWarning"]]},
+              "Dimensions": [ { "Name": "InstanceId", "Value": {"Ref": "JenkinsInstanceId"} }]
+           }
+        },
+        "DB21aMemoryUtilizationInitialWarning": {
+           "Type": "AWS::CloudWatch::Alarm",
+           "Condition": "create-db-alarms",
+           "Properties": {
+              "MetricName": "MemoryUtilization",
+              "Namespace": "System/Linux",
+              "ComparisonOperator": "GreaterThanThreshold",
+              "EvaluationPeriods": "2",
+              "Period": "60",
+              "Statistic": "Average",
+              "Threshold": "75",
+              "AlarmDescription": "Server db2 server-1a MemoryUtilization Alarm Initial Warning - Server Exceeding MemoryUtilization Initial Threshold limit 75%",
+              "AlarmName": { "Fn::Join": ["",[{"Ref": "EnvName"},"-","DB2a","-","MemoryUtilization-","-","InitialWarning"]]},
+              "Dimensions": [ { "Name": "InstanceId", "Value": {"Ref": "DB2AInstanceId"} }]
+           }
+        },
+        "PostgreSQLAMemoryUtilizationInitialWarning": {
+           "Type": "AWS::CloudWatch::Alarm",
+           "Condition": "create-db-alarms",
+           "Properties": {
+              "MetricName": "MemoryUtilization",
+              "Namespace": "System/Linux",
+              "ComparisonOperator": "GreaterThanThreshold",
+              "EvaluationPeriods": "2",
+              "Period": "60",
+              "Statistic": "Average",
+              "Threshold": "75",
+              "AlarmDescription": "Server Postgresql C MemoryUtilization Alarm Initial Warning - Server Exceeding MemoryUtilization Initial Threshold limit 75%",
+              "AlarmName": { "Fn::Join": ["",[{"Ref": "EnvName"},"-","PostgreSQLA","-","MemoryUtilization-","-","InitialWarning"]]},
+              "Dimensions": [ { "Name": "InstanceId", "Value": {"Ref": "PostgreSQLAInstanceId"} }]
+           }
+        },
+        "ElasticSearchMemoryUtilizationInitialWarning": {
+           "Type": "AWS::CloudWatch::Alarm",
+           "Condition": "createES1node",
+           "Properties": {
+              "MetricName": "MemoryUtilization",
+              "Namespace": "System/Linux",
+              "ComparisonOperator": "GreaterThanThreshold",
+              "EvaluationPeriods": "2",
+              "Period": "60",
+              "Statistic": "Average",
+              "Threshold": "75",
+              "AlarmDescription": "Server ElasticSearch MemoryUtilization Alarm Initial Warning - Server Exceeding MemoryUtilization Initial Threshold limit 75%",
+              "AlarmName": { "Fn::Join": ["",[{"Ref": "EnvName"},"-","ElasticSearch","-","MemoryUtilization-","-","InitialWarning"]]},
+              "Dimensions": [ { "Name": "InstanceId", "Value": {"Ref": "ElasticSearchInstanceId"} }]
+           }
+        },
+
+        
+        "WebGateway1aMemoryUtilizationCriticalWarning": {
+           "Type": "AWS::CloudWatch::Alarm",
+           "Properties": {
+              "MetricName": "MemoryUtilization",
+              "Namespace": "System/Linux",
+              "ComparisonOperator": "GreaterThanThreshold",
+              "EvaluationPeriods": "1",
+              "Period": "60",
+              "Statistic": "Average",
+              "Threshold": "90",
+              "AlarmActions": [{"Ref": "CriticalWarning"}],
+              "AlarmDescription": "Server WebGateway-1a MemoryUtilization Alarm Critical Warning - Server Exceeding MemoryUtilization Critical Threshold limit 90%",
+              "AlarmName": { "Fn::Join": ["",[{"Ref": "EnvName"},"-","WebGateway1a","-","MemoryUtilization-","-","CriticalWarning"]]},
+              "Dimensions": [ { "Name": "InstanceId", "Value": {"Ref": "InternalWebGatewayAInstanceId"} }]
+           }
+        },
+        "WebGateway1cMemoryUtilizationCriticalWarning": {
+           "Type": "AWS::CloudWatch::Alarm",
+           "Properties": {
+              "MetricName": "MemoryUtilization",
+              "Namespace": "System/Linux",
+              "ComparisonOperator": "GreaterThanThreshold",
+              "EvaluationPeriods": "1",
+              "Period": "60",
+              "Statistic": "Average",
+              "Threshold": "90",
+              "AlarmActions": [{"Ref": "CriticalWarning"}],
+              "AlarmDescription": "Server WebGateway-1c MemoryUtilization Alarm Critical Warning - Server Exceeding MemoryUtilization Critical Threshold limit 90%",
+              "AlarmName": { "Fn::Join": ["",[{"Ref": "EnvName"},"-","WebGateway1c","-","MemoryUtilization-","-","CriticalWarning"]]},
+              "Dimensions": [ { "Name": "InstanceId", "Value": {"Ref": "InternalWebGatewayCInstanceId"} }]
+           }
+        },
+        "AppServer1aMemoryUtilizationCriticalWarning": {
+           "Type": "AWS::CloudWatch::Alarm",
+           "Properties": {
+              "MetricName": "MemoryUtilization",
+              "Namespace": "System/Linux",
+              "ComparisonOperator": "GreaterThanThreshold",
+              "EvaluationPeriods": "1",
+              "Period": "60",
+              "Statistic": "Average",
+              "Threshold": "90",
+              "AlarmActions": [{"Ref": "CriticalWarning"}],
+              "AlarmDescription": "App Server EnvName MemoryUtilization Alarm Initial Warning - Server Exceeding MemoryUtilization Initial Threshold limit 90%",
+              "AlarmName": { "Fn::Join": ["",[{"Ref": "EnvName"},"-","App1a","-","MemoryUtilization-","-","CriticalWarning"]]},
+              "Dimensions": [ { "Name": "InstanceId", "Value": {"Ref": "AppServerAInstanceId"} }]
+           }
+        },
+        "AppServer1cMemoryUtilizationCriticalWarning": {
+           "Type": "AWS::CloudWatch::Alarm",
+           "Properties": {
+              "MetricName": "MemoryUtilization",
+              "Namespace": "System/Linux",
+              "ComparisonOperator": "GreaterThanThreshold",
+              "EvaluationPeriods": "1",
+              "Period": "60",
+              "Statistic": "Average",
+              "Threshold": "90",
+              "AlarmActions": [{"Ref": "CriticalWarning"}],
+              "AlarmDescription": "App Server EnvName MemoryUtilization Alarm Critical Warning - Server Exceeding MemoryUtilization Critical Threshold limit 90%",
+              "AlarmName": { "Fn::Join": ["",[{"Ref": "EnvName"},"-","App1c","-","MemoryUtilization-","-","CriticalWarning"]]},
+              "Dimensions": [ { "Name": "InstanceId", "Value": {"Ref": "AppServerCInstanceId"} }]
+           }
+        },
+        "Perry1aMemoryUtilizationCriticalWarning": {
+           "Type": "AWS::CloudWatch::Alarm",
+           "Properties": {
+              "MetricName": "MemoryUtilization",
+              "Namespace": "System/Linux",
+              "ComparisonOperator": "GreaterThanThreshold",
+              "EvaluationPeriods": "1",
+              "Period": "60",
+              "Statistic": "Average",
+              "Threshold": "90",
+              "AlarmActions": [{"Ref": "CriticalWarning"}],
+              "AlarmDescription": "Server Perry-1a MemoryUtilization Alarm Critical Warning - Server Exceeding MemoryUtilization Critical Threshold limit 90%",
+              "AlarmName": { "Fn::Join": ["",[{"Ref": "EnvName"},"-","Perry1a","-","MemoryUtilization-","-","CriticalWarning"]]},
+              "Dimensions": [ { "Name": "InstanceId", "Value": {"Ref": "PerryServerAInstanceId"} }]
+           }
+        },
+        "Perry1cMemoryUtilizationCriticalWarning": {
+           "Type": "AWS::CloudWatch::Alarm",
+           "Properties": {
+              "MetricName": "MemoryUtilization",
+              "Namespace": "System/Linux",
+              "ComparisonOperator": "GreaterThanThreshold",
+              "EvaluationPeriods": "1",
+              "Period": "60",
+              "Statistic": "Average",
+              "Threshold": "90",
+              "AlarmActions": [{"Ref": "CriticalWarning"}],
+              "AlarmDescription": "Server Perry-1c MemoryUtilization Alarm Critical Warning - Server Exceeding MemoryUtilization Critical Threshold limit 90%",
+              "AlarmName": { "Fn::Join": ["",[{"Ref": "EnvName"},"-","Perry1c","-","MemoryUtilization-","-","CriticalWarning"]]},
+              "Dimensions": [ { "Name": "InstanceId", "Value": {"Ref": "PerryServerCInstanceId"} }]
+           }
+        },
+        "Api1aMemoryUtilizationCriticalWarning": {
+           "Type": "AWS::CloudWatch::Alarm",
+           "Properties": {
+              "MetricName": "MemoryUtilization",
+              "Namespace": "System/Linux",
+              "ComparisonOperator": "GreaterThanThreshold",
+              "EvaluationPeriods": "1",
+              "Period": "60",
+              "Statistic": "Average",
+              "Threshold": "90",
+              "AlarmActions": [{"Ref": "CriticalWarning"}],
+              "AlarmDescription": "Api Server EnvName MemoryUtilization Alarm Initial Warning - Server Exceeding MemoryUtilization Initial Threshold limit 90%",
+              "AlarmName": { "Fn::Join": ["",[{"Ref": "EnvName"},"-","Api1a","-","MemoryUtilization-","-","CriticalWarning"]]},
+              "Dimensions": [ { "Name": "InstanceId", "Value": {"Ref": "ApiServerAInstanceId"} }]
+           }
+        },
+        "Api1cMemoryUtilizationCriticalWarning": {
+           "Type": "AWS::CloudWatch::Alarm",
+           "Properties": {
+              "MetricName": "MemoryUtilization",
+              "Namespace": "System/Linux",
+              "ComparisonOperator": "GreaterThanThreshold",
+              "EvaluationPeriods": "1",
+              "Period": "60",
+              "Statistic": "Average",
+              "Threshold": "90",
+              "AlarmActions": [{"Ref": "CriticalWarning"}],
+              "AlarmDescription": "Api Server EnvName MemoryUtilization Alarm Critical Warning - Server Exceeding MemoryUtilization Critical Threshold limit 90%",
+              "AlarmName": { "Fn::Join": ["",[{"Ref": "EnvName"},"-","Api1c","-","MemoryUtilization-","-","CriticalWarning"]]},
+              "Dimensions": [ { "Name": "InstanceId", "Value": {"Ref": "ApiServerCInstanceId"} }]
+           }
+        },
+        "Rundeck1aMemoryUtilizationCriticalWarning": {
+           "Type": "AWS::CloudWatch::Alarm",
+           "Properties": {
+              "MetricName": "MemoryUtilization",
+              "Namespace": "System/Linux",
+              "ComparisonOperator": "GreaterThanThreshold",
+              "EvaluationPeriods": "1",
+              "Period": "60",
+              "Statistic": "Average",
+              "Threshold": "90",
+              "AlarmActions": [{"Ref": "CriticalWarning"}],
+              "AlarmDescription": "Server Rundeck MemoryUtilization Alarm Critical Warning - Server Exceeding MemoryUtilization Critical Threshold limit 90%",
+              "AlarmName": { "Fn::Join": ["",[{"Ref": "EnvName"},"-","Rundeck","-","MemoryUtilization-","-","CriticalWarning"]]},
+              "Dimensions": [ { "Name": "InstanceId", "Value": {"Ref": "RundeckServerAInstanceId"} }]
+           }
+        },
+        "JenkinsMemoryUtilizationCriticalWarning": {
+           "Type": "AWS::CloudWatch::Alarm",
+           "Properties": {
+              "MetricName": "MemoryUtilization",
+              "Namespace": "System/Linux",
+              "ComparisonOperator": "GreaterThanThreshold",
+              "EvaluationPeriods": "1",
+              "Period": "60",
+              "Statistic": "Average",
+              "Threshold": "90",
+              "AlarmActions": [{"Ref": "CriticalWarning"}],
+              "AlarmDescription": "Server Jenkins-SlaveNode MemoryUtilization Alarm Critical Warning - Server Exceeding MemoryUtilization Critical Threshold limit 90%",
+              "AlarmName": { "Fn::Join": ["",[{"Ref": "EnvName"},"-","Jenkins","-","MemoryUtilization-","-","CriticalWarning"]]},
+              "Dimensions": [ { "Name": "InstanceId", "Value": {"Ref": "JenkinsInstanceId"} }]
+           }
+        },
+        "DB21aMemoryUtilizationCriticalWarning": {
+           "Type": "AWS::CloudWatch::Alarm",
+           "Condition": "create-db-alarms",
+           "Properties": {
+              "MetricName": "MemoryUtilization",
+              "Namespace": "System/Linux",
+              "ComparisonOperator": "GreaterThanThreshold",
+              "EvaluationPeriods": "1",
+              "Period": "60",
+              "Statistic": "Average",
+              "Threshold": "90",
+              "AlarmActions": [{"Ref": "CriticalWarning"}],
+              "AlarmDescription": "Server db2 server-1a MemoryUtilization Alarm Critical Warning - Server Exceeding MemoryUtilization Critical Threshold limit 90%",
+              "AlarmName": { "Fn::Join": ["",[{"Ref": "EnvName"},"-","DB2a","-","MemoryUtilization-","-","CriticalWarning"]]},
+              "Dimensions": [ { "Name": "InstanceId", "Value": {"Ref": "DB2AInstanceId"} }]
+           }
+        },
+        "PostgreSQLAMemoryUtilizationCriticalWarning": {
+           "Type": "AWS::CloudWatch::Alarm",
+           "Condition": "create-db-alarms",
+           "Properties": {
+              "MetricName": "MemoryUtilization",
+              "Namespace": "System/Linux",
+              "ComparisonOperator": "GreaterThanThreshold",
+              "EvaluationPeriods": "1",
+              "Period": "60",
+              "Statistic": "Average",
+              "Threshold": "90",
+              "AlarmActions": [{"Ref": "CriticalWarning"}],
+              "AlarmDescription": "PostgreSQL C MemoryUtilization Alarm Initial Warning - Server Exceeding MemoryUtilization Initial Threshold limit 90%",
+              "AlarmName": { "Fn::Join": ["",[{"Ref": "EnvName"},"-","PostgreSQLA","-","MemoryUtilization-","-","CriticalWarning"]]},
+              "Dimensions": [ { "Name": "InstanceId", "Value": {"Ref": "PostgreSQLAInstanceId"} }]
+           }
+        },
+        "ElasticSearchMemoryUtilizationCriticalWarning": {
+           "Type": "AWS::CloudWatch::Alarm",
+           "Condition": "createES1node",
+           "Properties": {
+              "MetricName": "MemoryUtilization",
+              "Namespace": "System/Linux",
+              "ComparisonOperator": "GreaterThanThreshold",
+              "EvaluationPeriods": "1",
+              "Period": "60",
+              "Statistic": "Average",
+              "Threshold": "90",
+              "AlarmDescription": "Server ElasticSearch MemoryUtilization Alarm Critical Warning - Server Exceeding MemoryUtilization Critical Threshold limit 90%",
+              "AlarmName": { "Fn::Join": ["",[{"Ref": "EnvName"},"-","ElasticSearch","-","MemoryUtilization-","-","CriticalWarning"]]},
+              "Dimensions": [ { "Name": "InstanceId", "Value": {"Ref": "ElasticSearchInstanceId"} }]
+           }
+        },
+
+
+        
+        "WebGateway1aDiskSpaceUtilizationInitialWarning": {
+           "Type": "AWS::CloudWatch::Alarm",
+           "Properties": {
+              "MetricName": "DiskSpaceUtilization",
+              "Namespace": "System/Linux",
+              "ComparisonOperator": "GreaterThanThreshold",
+              "EvaluationPeriods": "2",
+              "Period": "60",
+              "Statistic": "Average",
+              "Threshold": "75",
+              "AlarmDescription": "Server WebGateway-1a DiskSpaceUtilization Alarm Initial Warning - Server Exceeding DiskSpaceUtilization Initial Threshold limit 75%",
+              "AlarmName": { "Fn::Join": ["",[{"Ref": "EnvName"},"-","WebGateway1a","-","DiskSpaceUtilization-","-","InitialWarning"]]},
+              "Dimensions": [ 
+                  { "Name": "InstanceId", "Value": {"Ref": "InternalWebGatewayAInstanceId"} },
+                  { "Name": "Filesystem", "Value": "/dev/xvda1"},
+                  { "Name": "MountPath", "Value": "/" }
+              ]
+           }
+        },
+        "WebGateway1cDiskSpaceUtilizationInitialWarning": {
+           "Type": "AWS::CloudWatch::Alarm",
+           "Properties": {
+              "MetricName": "DiskSpaceUtilization",
+              "Namespace": "System/Linux",
+              "ComparisonOperator": "GreaterThanThreshold",
+              "EvaluationPeriods": "2",
+              "Period": "60",
+              "Statistic": "Average",
+              "Threshold": "75",
+              "AlarmDescription": "Server WebGateway-1c DiskSpaceUtilization Alarm Initial Warning - Server Exceeding DiskSpaceUtilization Initial Threshold limit 75%",
+              "AlarmName": { "Fn::Join": ["",[{"Ref": "EnvName"},"-","WebGateway1c","-","DiskSpaceUtilization-","-","InitialWarning"]]},
+              "Dimensions": [ 
+                  { "Name": "InstanceId", "Value": {"Ref": "InternalWebGatewayCInstanceId"} },
+                  { "Name": "Filesystem", "Value": "/dev/xvda1"},
+                  { "Name": "MountPath", "Value": "/" }
+              ]
+           }
+        },
+        "AppServer1aDiskSpaceUtilizationInitialWarning": {
+           "Type": "AWS::CloudWatch::Alarm",
+           "Properties": {
+              "MetricName": "DiskSpaceUtilization",
+              "Namespace": "System/Linux",
+              "ComparisonOperator": "GreaterThanThreshold",
+              "EvaluationPeriods": "2",
+              "Period": "60",
+              "Statistic": "Average",
+              "Threshold": "75",
+              "AlarmDescription": "AppServer EnvName DiskSpaceUtilization Alarm Initial Warning - Server Exceeding DiskSpaceUtilization Initial Threshold limit 75%",
+              "AlarmName": { "Fn::Join": ["",[{"Ref": "EnvName"},"-","App1a","-","DiskSpaceUtilization-","-","InitialWarning"]]},
+              "Dimensions": [ 
+                  { "Name": "InstanceId", "Value": {"Ref": "AppServerAInstanceId"} },
+                  { "Name": "Filesystem", "Value": "/dev/xvda1"},
+                  { "Name": "MountPath", "Value": "/" }
+              ]
+           }
+        },
+        "AppServer1cDiskSpaceUtilizationInitialWarning": {
+           "Type": "AWS::CloudWatch::Alarm",
+           "Properties": {
+              "MetricName": "DiskSpaceUtilization",
+              "Namespace": "System/Linux",
+              "ComparisonOperator": "GreaterThanThreshold",
+              "EvaluationPeriods": "2",
+              "Period": "60",
+              "Statistic": "Average",
+              "Threshold": "75",
+              "AlarmDescription": "AppServer EnvName DiskSpaceUtilization Alarm Initial Warning - Server Exceeding DiskSpaceUtilization Initial Threshold limit 75%",
+              "AlarmName": { "Fn::Join": ["",[{"Ref": "EnvName"},"-","App1c","-","DiskSpaceUtilization-","-","InitialWarning"]]},
+              "Dimensions": [ 
+                  { "Name": "InstanceId", "Value": {"Ref": "AppServerCInstanceId"} },
+                  { "Name": "Filesystem", "Value": "/dev/xvda1"},
+                  { "Name": "MountPath", "Value": "/" }
+              ]
+           }
+        },
+        "Perry1aDiskSpaceUtilizationInitialWarning": {
+           "Type": "AWS::CloudWatch::Alarm",
+           "Properties": {
+              "MetricName": "DiskSpaceUtilization",
+              "Namespace": "System/Linux",
+              "ComparisonOperator": "GreaterThanThreshold",
+              "EvaluationPeriods": "2",
+              "Period": "60",
+              "Statistic": "Average",
+              "Threshold": "75",
+              "AlarmDescription": "Server Perry-1a DiskSpaceUtilization Alarm Initial Warning - Server Exceeding DiskSpaceUtilization Initial Threshold limit 75%",
+              "AlarmName": { "Fn::Join": ["",[{"Ref": "EnvName"},"-","Perry1a","-","DiskSpaceUtilization-","-","InitialWarning"]]},
+              "Dimensions": [ 
+                  { "Name": "InstanceId", "Value": {"Ref": "PerryServerAInstanceId"} },
+                  { "Name": "Filesystem", "Value": "/dev/xvda1"},
+                  { "Name": "MountPath", "Value": "/" }
+              ]
+           }
+        },
+        "Perry1cDiskSpaceUtilizationInitialWarning": {
+           "Type": "AWS::CloudWatch::Alarm",
+           "Properties": {
+              "MetricName": "DiskSpaceUtilization",
+              "Namespace": "System/Linux",
+              "ComparisonOperator": "GreaterThanThreshold",
+              "EvaluationPeriods": "2",
+              "Period": "60",
+              "Statistic": "Average",
+              "Threshold": "75",
+              "AlarmDescription": "Server Perry-1c DiskSpaceUtilization Alarm Initial Warning - Server Exceeding DiskSpaceUtilization Initial Threshold limit 75%",
+              "AlarmName": { "Fn::Join": ["",[{"Ref": "EnvName"},"-","Perry1c","-","DiskSpaceUtilization-","-","InitialWarning"]]},
+              "Dimensions": [ 
+                  { "Name": "InstanceId", "Value": {"Ref": "PerryServerCInstanceId"} },
+                  { "Name": "Filesystem", "Value": "/dev/xvda1"},
+                  { "Name": "MountPath", "Value": "/" }
+              ]
+           }
+        },
+        "Api1aDiskSpaceUtilizationInitialWarning": {
+           "Type": "AWS::CloudWatch::Alarm",
+           "Properties": {
+              "MetricName": "DiskSpaceUtilization",
+              "Namespace": "System/Linux",
+              "ComparisonOperator": "GreaterThanThreshold",
+              "EvaluationPeriods": "2",
+              "Period": "60",
+              "Statistic": "Average",
+              "Threshold": "75",
+              "AlarmDescription": "Api Server EnvName DiskSpaceUtilization Alarm Initial Warning - Server Exceeding DiskSpaceUtilization Initial Threshold limit 75%",
+              "AlarmName": { "Fn::Join": ["",[{"Ref": "EnvName"},"-","Api1a","-","DiskSpaceUtilization-","-","InitialWarning"]]},
+              "Dimensions": [ 
+                  { "Name": "InstanceId", "Value": {"Ref": "ApiServerAInstanceId"} },
+                  { "Name": "Filesystem", "Value": "/dev/xvda1"},
+                  { "Name": "MountPath", "Value": "/" }
+              ]
+           }
+        },
+        "Api1cDiskSpaceUtilizationInitialWarning": {
+           "Type": "AWS::CloudWatch::Alarm",
+           "Properties": {
+              "MetricName": "DiskSpaceUtilization",
+              "Namespace": "System/Linux",
+              "ComparisonOperator": "GreaterThanThreshold",
+              "EvaluationPeriods": "2",
+              "Period": "60",
+              "Statistic": "Average",
+              "Threshold": "75",
+              "AlarmDescription": "Api Server EnvName DiskSpaceUtilization Alarm Initial Warning - Server Exceeding DiskSpaceUtilization Initial Threshold limit 75%",
+              "AlarmName": { "Fn::Join": ["",[{"Ref": "EnvName"},"-","Api1c","-","DiskSpaceUtilization-","-","InitialWarning"]]},
+              "Dimensions": [ 
+                  { "Name": "InstanceId", "Value": {"Ref": "ApiServerCInstanceId"} },
+                  { "Name": "Filesystem", "Value": "/dev/xvda1"},
+                  { "Name": "MountPath", "Value": "/" }
+              ]
+           }
+        },
+        "Rundeck1aDiskSpaceUtilizationInitialWarning": {
+           "Type": "AWS::CloudWatch::Alarm",
+           "Properties": {
+              "MetricName": "DiskSpaceUtilization",
+              "Namespace": "System/Linux",
+              "ComparisonOperator": "GreaterThanThreshold",
+              "EvaluationPeriods": "2",
+              "Period": "60",
+              "Statistic": "Average",
+              "Threshold": "75",
+              "AlarmDescription": "Server Rundeck DiskSpaceUtilization Alarm Initial Warning - Server Exceeding DiskSpaceUtilization Initial Threshold limit 75%",
+              "AlarmName": { "Fn::Join": ["",[{"Ref": "EnvName"},"-","Rundeck","-","DiskSpaceUtilization-","-","InitialWarning"]]},
+              "Dimensions": [ 
+                  { "Name": "InstanceId", "Value": {"Ref": "RundeckServerAInstanceId"} },
+                  { "Name": "Filesystem", "Value": "/dev/xvda1"},
+                  { "Name": "MountPath", "Value": "/" }
+              ]
+           }
+        },
+        "JenkinsDiskSpaceUtilizationInitialWarning": {
+           "Type": "AWS::CloudWatch::Alarm",
+           "Properties": {
+              "MetricName": "DiskSpaceUtilization",
+              "Namespace": "System/Linux",
+              "ComparisonOperator": "GreaterThanThreshold",
+              "EvaluationPeriods": "2",
+              "Period": "60",
+              "Statistic": "Average",
+              "Threshold": "75",
+              "AlarmDescription": "Server Jenkins-SlaveNode DiskSpaceUtilization Alarm Initial Warning - Server Exceeding DiskSpaceUtilization Initial Threshold limit 75%",
+              "AlarmName": { "Fn::Join": ["",[{"Ref": "EnvName"},"-","Jenkins","-","DiskSpaceUtilization-","-","InitialWarning"]]},
+              "Dimensions": [ 
+                  { "Name": "InstanceId", "Value": {"Ref": "JenkinsInstanceId"} },
+                  { "Name": "Filesystem", "Value": "/dev/xvda1"},
+                  { "Name": "MountPath", "Value": "/" }
+              ]
+           }
+        },
+        "DB2ASpaceUtilizationInitialWarning": {
+           "Type": "AWS::CloudWatch::Alarm",
+           "Condition": "create-db-alarms",
+           "Properties": {
+              "MetricName": "DiskSpaceUtilization",
+              "Namespace": "System/Linux",
+              "ComparisonOperator": "GreaterThanThreshold",
+              "EvaluationPeriods": "2",
+              "Period": "60",
+              "Statistic": "Average",
+              "Threshold": "75",
+              "AlarmDescription": "Server db2-1a  DiskSpaceUtilization Alarm Initial Warning - Server Exceeding DiskSpaceUtilization Initial Threshold limit 75%",
+              "AlarmName": { "Fn::Join": ["",[{"Ref": "EnvName"},"-","db21a","-","DiskSpaceUtilization-","-","InitialWarning"]]},
+              "Dimensions": [ 
+                  { "Name": "InstanceId", "Value": {"Ref": "DB2AInstanceId"} },
+                  { "Name": "Filesystem", "Value": "/dev/xvda1"},
+                  { "Name": "MountPath", "Value": "/" }
+              ]
+           }
+        },
+        "PostgreSQLADiskSpaceUtilizationInitialWarning": {
+           "Type": "AWS::CloudWatch::Alarm",
+           "Condition": "create-db-alarms",
+           "Properties": {
+              "MetricName": "DiskSpaceUtilization",
+              "Namespace": "System/Linux",
+              "ComparisonOperator": "GreaterThanThreshold",
+              "EvaluationPeriods": "2",
+              "Period": "60",
+              "Statistic": "Average",
+              "Threshold": "75",
+              "AlarmDescription": "Server PostgreSQL C DiskSpaceUtilization Alarm Initial Warning - Server Exceeding DiskSpaceUtilization Initial Threshold limit 75%",
+              "AlarmName": { "Fn::Join": ["",[{"Ref": "EnvName"},"-","PostgreSQLA","-","DiskSpaceUtilization-","-","InitialWarning"]]},
+              "Dimensions": [ 
+                  { "Name": "InstanceId", "Value": {"Ref": "PostgreSQLAInstanceId"} },
+                  { "Name": "Filesystem", "Value": "/dev/xvda1"},
+                  { "Name": "MountPath", "Value": "/" }
+              ]
+           }
+        },
+        "ElasticSearchDiskSpaceUtilizationInitialWarning": {
+           "Type": "AWS::CloudWatch::Alarm",
+           "Condition": "createES1node",
+           "Properties": {
+              "MetricName": "DiskSpaceUtilization",
+              "Namespace": "System/Linux",
+              "ComparisonOperator": "GreaterThanThreshold",
+              "EvaluationPeriods": "2",
+              "Period": "60",
+              "Statistic": "Average",
+              "Threshold": "75",
+              "AlarmDescription": "Server ElasticSearch DiskSpaceUtilization Alarm Initial Warning - Server Exceeding DiskSpaceUtilization Initial Threshold limit 75%",
+              "AlarmName": { "Fn::Join": ["",[{"Ref": "EnvName"},"-","ElasticSearch","-","DiskSpaceUtilization-","-","InitialWarning"]]},
+              "Dimensions": [ 
+                  { "Name": "InstanceId", "Value": {"Ref": "ElasticSearchInstanceId"} },
+                  { "Name": "Filesystem", "Value": "/dev/xvda1"},
+                  { "Name": "MountPath", "Value": "/" }
+              ]
+           }
+        },
+
+        "WebGateway1aDiskSpaceUtilizationCriticalWarning": {
+           "Type": "AWS::CloudWatch::Alarm",
+           "Properties": {
+              "MetricName": "DiskSpaceUtilization",
+              "Namespace": "System/Linux",
+              "ComparisonOperator": "GreaterThanThreshold",
+              "EvaluationPeriods": "1",
+              "Period": "60",
+              "Statistic": "Average",
+              "Threshold": "90",
+              "AlarmActions": [{"Ref": "CriticalWarning"}],
+              "AlarmDescription": "Server WebGateway-1a DiskSpaceUtilization Alarm Critical Warning - Server Exceeding DiskSpaceUtilization Critical Threshold limit 90%",
+              "AlarmName": { "Fn::Join": ["",[{"Ref": "EnvName"},"-","WebGateway1a","-","DiskSpaceUtilization-","-","CriticalWarning"]]},
+              "Dimensions": [ 
+                  { "Name": "InstanceId", "Value": {"Ref": "InternalWebGatewayAInstanceId"} },
+                  { "Name": "Filesystem", "Value": "/dev/xvda1"},
+                  { "Name": "MountPath", "Value": "/" }
+              ]
+           }
+        },
+        "WebGateway1cDiskSpaceUtilizationCriticalWarning": {
+           "Type": "AWS::CloudWatch::Alarm",
+           "Properties": {
+              "MetricName": "DiskSpaceUtilization",
+              "Namespace": "System/Linux",
+              "ComparisonOperator": "GreaterThanThreshold",
+              "EvaluationPeriods": "1",
+              "Period": "60",
+              "Statistic": "Average",
+              "Threshold": "90",
+              "AlarmDescription": "Server WebGateway-1c DiskSpaceUtilization Alarm Critical Warning - Server Exceeding DiskSpaceUtilization Critical Threshold limit 75%",
+              "AlarmName": { "Fn::Join": ["",[{"Ref": "EnvName"},"-","WebGateway1c","-","DiskSpaceUtilization-","-","CriticalWarning"]]},
+              "Dimensions": [ 
+                  { "Name": "InstanceId", "Value": {"Ref": "InternalWebGatewayCInstanceId"} },
+                  { "Name": "Filesystem", "Value": "/dev/xvda1"},
+                  { "Name": "MountPath", "Value": "/" }
+              ]
+           }
+        },
+        "AppServer1aDiskSpaceUtilizationCriticalWarning": {
+           "Type": "AWS::CloudWatch::Alarm",
+           "Properties": {
+              "MetricName": "DiskSpaceUtilization",
+              "Namespace": "System/Linux",
+              "ComparisonOperator": "GreaterThanThreshold",
+              "EvaluationPeriods": "1",
+              "Period": "60",
+              "Statistic": "Average",
+              "Threshold": "90",
+              "AlarmActions": [{"Ref": "CriticalWarning"}],
+              "AlarmDescription": "AppServer EnvName DiskSpaceUtilization Alarm Initial Warning - Server Exceeding DiskSpaceUtilization Initial Threshold limit 90%",
+              "AlarmName": { "Fn::Join": ["",[{"Ref": "EnvName"},"-","App1a","-","DiskSpaceUtilization-","-","CriticalWarning"]]},
+              "Dimensions": [ 
+                  { "Name": "InstanceId", "Value": {"Ref": "AppServerAInstanceId"} },
+                  { "Name": "Filesystem", "Value": "/dev/xvda1"},
+                  { "Name": "MountPath", "Value": "/" }           
+              ]
+           }
+        },
+        "AppServer1cDiskSpaceUtilizationCriticalWarning": {
+           "Type": "AWS::CloudWatch::Alarm",
+           "Properties": {
+              "MetricName": "DiskSpaceUtilization",
+              "Namespace": "System/Linux",
+              "ComparisonOperator": "GreaterThanThreshold",
+              "EvaluationPeriods": "1",
+              "Period": "60",
+              "Statistic": "Average",
+              "Threshold": "90",
+              "AlarmActions": [{"Ref": "CriticalWarning"}],
+              "AlarmDescription": "AppServer EnvName DiskSpaceUtilization Alarm Critical Warning - Server Exceeding DiskSpaceUtilization Critical Threshold limit 90%",
+              "AlarmName": { "Fn::Join": ["",[{"Ref": "EnvName"},"-","App1c","-","DiskSpaceUtilization-","-","CriticalWarning"]]},
+              "Dimensions": [ 
+                  { "Name": "InstanceId", "Value": {"Ref": "AppServerCInstanceId"} },
+                  { "Name": "Filesystem", "Value": "/dev/xvda1"},
+                  { "Name": "MountPath", "Value": "/" }
+              ]
+           }
+        },
+        "Perry1aDiskSpaceUtilizationCriticalWarning": {
+           "Type": "AWS::CloudWatch::Alarm",
+           "Properties": {
+              "MetricName": "DiskSpaceUtilization",
+              "Namespace": "System/Linux",
+              "ComparisonOperator": "GreaterThanThreshold",
+              "EvaluationPeriods": "1",
+              "Period": "60",
+              "Statistic": "Average",
+              "Threshold": "90",
+              "AlarmActions": [{"Ref": "CriticalWarning"}],
+              "AlarmDescription": "Server Perry-1a DiskSpaceUtilization Alarm Critical Warning - Server Exceeding DiskSpaceUtilization Critical Threshold limit 90%",
+              "AlarmName": { "Fn::Join": ["",[{"Ref": "EnvName"},"-","Perry1a","-","DiskSpaceUtilization-","-","CriticalWarning"]]},
+              "Dimensions": [ 
+                  { "Name": "InstanceId", "Value": {"Ref": "PerryServerAInstanceId"} },
+                  { "Name": "Filesystem", "Value": "/dev/xvda1"},
+                  { "Name": "MountPath", "Value": "/" }
+              ]
+           }
+        },
+        "Perry1cDiskSpaceUtilizationCriticalWarning": {
+           "Type": "AWS::CloudWatch::Alarm",
+           "Properties": {
+              "MetricName": "DiskSpaceUtilization",
+              "Namespace": "System/Linux",
+              "ComparisonOperator": "GreaterThanThreshold",
+              "EvaluationPeriods": "1",
+              "Period": "60",
+              "Statistic": "Average",
+              "Threshold": "90",
+              "AlarmActions": [{"Ref": "CriticalWarning"}],
+              "AlarmDescription": "Server Perry-1c DiskSpaceUtilization Alarm Critical Warning - Server Exceeding DiskSpaceUtilization Critical Threshold limit 90%",
+              "AlarmName": { "Fn::Join": ["",[{"Ref": "EnvName"},"-","Perry1c","-","DiskSpaceUtilization-","-","CriticalWarning"]]},
+              "Dimensions": [ 
+                  { "Name": "InstanceId", "Value": {"Ref": "PerryServerCInstanceId"} },
+                  { "Name": "Filesystem", "Value": "/dev/xvda1"},
+                  { "Name": "MountPath", "Value": "/" }
+              ]
+           }
+        },
+        "Api1aDiskSpaceUtilizationCriticalWarning": {
+           "Type": "AWS::CloudWatch::Alarm",
+           "Properties": {
+              "MetricName": "DiskSpaceUtilization",
+              "Namespace": "System/Linux",
+              "ComparisonOperator": "GreaterThanThreshold",
+              "EvaluationPeriods": "1",
+              "Period": "60",
+              "Statistic": "Average",
+              "Threshold": "90",
+              "AlarmActions": [{"Ref": "CriticalWarning"}],
+              "AlarmDescription": "Api Server EnvName DiskSpaceUtilization Alarm Initial Warning - Server Exceeding DiskSpaceUtilization Initial Threshold limit 90%",
+              "AlarmName": { "Fn::Join": ["",[{"Ref": "EnvName"},"-","Api1a","-","DiskSpaceUtilization-","-","CriticalWarning"]]},
+              "Dimensions": [ 
+                  { "Name": "InstanceId", "Value": {"Ref": "ApiServerAInstanceId"} },
+                  { "Name": "Filesystem", "Value": "/dev/xvda1"},
+                  { "Name": "MountPath", "Value": "/" }           
+              ]
+           }
+        },
+        "Api1cDiskSpaceUtilizationCriticalWarning": {
+           "Type": "AWS::CloudWatch::Alarm",
+           "Properties": {
+              "MetricName": "DiskSpaceUtilization",
+              "Namespace": "System/Linux",
+              "ComparisonOperator": "GreaterThanThreshold",
+              "EvaluationPeriods": "1",
+              "Period": "60",
+              "Statistic": "Average",
+              "Threshold": "90",
+              "AlarmActions": [{"Ref": "CriticalWarning"}],
+              "AlarmDescription": "Api Server EnvName DiskSpaceUtilization Alarm Critical Warning - Server Exceeding DiskSpaceUtilization Critical Threshold limit 90%",
+              "AlarmName": { "Fn::Join": ["",[{"Ref": "EnvName"},"-","Api1c","-","DiskSpaceUtilization-","-","CriticalWarning"]]},
+              "Dimensions": [ 
+                  { "Name": "InstanceId", "Value": {"Ref": "ApiServerCInstanceId"} },
+                  { "Name": "Filesystem", "Value": "/dev/xvda1"},
+                  { "Name": "MountPath", "Value": "/" }
+              ]
+           }
+        },
+        "Rundeck1aDiskSpaceUtilizationCriticalWarning": {
+           "Type": "AWS::CloudWatch::Alarm",
+           "Properties": {
+              "MetricName": "DiskSpaceUtilization",
+              "Namespace": "System/Linux",
+              "ComparisonOperator": "GreaterThanThreshold",
+              "EvaluationPeriods": "1",
+              "Period": "60",
+              "Statistic": "Average",
+              "Threshold": "90",
+              "AlarmActions": [{"Ref": "CriticalWarning"}],
+              "AlarmDescription": "Server Rundeck DiskSpaceUtilization Alarm Critical Warning - Server Exceeding DiskSpaceUtilization Critical Threshold limit 90%",
+              "AlarmName": { "Fn::Join": ["",[{"Ref": "EnvName"},"-","Rundeck","-","DiskSpaceUtilization-","-","CriticalWarning"]]},
+              "Dimensions": [ 
+                  { "Name": "InstanceId", "Value": {"Ref": "RundeckServerAInstanceId"} },
+                  { "Name": "Filesystem", "Value": "/dev/xvda1"},
+                  { "Name": "MountPath", "Value": "/" }
+              ]
+           }
+        },
+        "JenkinsDiskSpaceUtilizationCriticalWarning": {
+           "Type": "AWS::CloudWatch::Alarm",
+           "Properties": {
+              "MetricName": "DiskSpaceUtilization",
+              "Namespace": "System/Linux",
+              "ComparisonOperator": "GreaterThanThreshold",
+              "EvaluationPeriods": "1",
+              "Period": "60",
+              "Statistic": "Average",
+              "Threshold": "90",
+              "AlarmActions": [{"Ref": "CriticalWarning"}],
+              "AlarmDescription": "Server Jenkins-SlaveNode DiskSpaceUtilization Alarm Critical Warning - Server Exceeding DiskSpaceUtilization Critical Threshold limit 90%",
+              "AlarmName": { "Fn::Join": ["",[{"Ref": "EnvName"},"-","Jenkins","-","DiskSpaceUtilization-","-","CriticalWarning"]]},
+              "Dimensions": [ 
+                  { "Name": "InstanceId", "Value": {"Ref": "JenkinsInstanceId"} },
+                  { "Name": "Filesystem", "Value": "/dev/xvda1"},
+                  { "Name": "MountPath", "Value": "/" }
+              ]
+           }
+        },
+        "DB2ASpaceUtilizationCriticalWarning": {
+           "Type": "AWS::CloudWatch::Alarm",
+           "Condition": "create-db-alarms",
+           "Properties": {
+              "MetricName": "DiskSpaceUtilization",
+              "Namespace": "System/Linux",
+              "ComparisonOperator": "GreaterThanThreshold",
+              "EvaluationPeriods": "1",
+              "Period": "60",
+              "Statistic": "Average",
+              "Threshold": "90",
+              "AlarmActions": [{"Ref": "CriticalWarning"}],
+              "AlarmDescription": "Server db2-1a  DiskSpaceUtilization Alarm Critical Warning - Server Exceeding DiskSpaceUtilization Critical Threshold limit 75%",
+              "AlarmName": { "Fn::Join": ["",[{"Ref": "EnvName"},"-","db21a","-","DiskSpaceUtilization-","-","CriticalWarning"]]},
+              "Dimensions": [ 
+                  { "Name": "InstanceId", "Value": {"Ref": "DB2AInstanceId"} },
+                  { "Name": "Filesystem", "Value": "/dev/xvda1"},
+                  { "Name": "MountPath", "Value": "/" }
+              ]
+           }
+        },
+        "PostgreSQLADiskSpaceUtilizationCriticalWarning": {
+           "Type": "AWS::CloudWatch::Alarm",
+           "Condition": "create-db-alarms",
+           "Properties": {
+              "MetricName": "DiskSpaceUtilization",
+              "Namespace": "System/Linux",
+              "ComparisonOperator": "GreaterThanThreshold",
+              "EvaluationPeriods": "1",
+              "Period": "60",
+              "Statistic": "Average",
+              "Threshold": "90",
+              "AlarmActions": [{"Ref": "CriticalWarning"}],
+              "AlarmDescription": "DiskSpaceUtilization Alarm Initial Warning - Server Exceeding DiskSpaceUtilization Initial Threshold limit 90%",
+              "AlarmName": { "Fn::Join": ["",[{"Ref": "EnvName"},"-","PostgreSQLA","-","DiskSpaceUtilization-","-","CriticalWarning"]]},
+              "Dimensions": [ 
+                  { "Name": "InstanceId", "Value": {"Ref": "PostgreSQLAInstanceId"} },
+                  { "Name": "Filesystem", "Value": "/dev/xvda1"},
+                  { "Name": "MountPath", "Value": "/" }           
+              ]
+           }
+        },
+        "ElasticSearchDiskSpaceUtilizationCriticalWarning": {
+           "Type": "AWS::CloudWatch::Alarm",
+           "Condition": "createES1node",
+           "Properties": {
+              "MetricName": "DiskSpaceUtilization",
+              "Namespace": "System/Linux",
+              "ComparisonOperator": "GreaterThanThreshold",
+              "EvaluationPeriods": "1",
+              "Period": "60",
+              "Statistic": "Average",
+              "Threshold": "90",
+              "AlarmDescription": "Server ElasticSearch DiskSpaceUtilization Alarm Critical Warning - Server Exceeding DiskSpaceUtilization Critical Threshold limit 90%",
+              "AlarmName": { "Fn::Join": ["",[{"Ref": "EnvName"},"-","ElasticSearch","-","DiskSpaceUtilization-","-","CriticalWarning"]]},
+              "Dimensions": [ 
+                  { "Name": "InstanceId", "Value": {"Ref": "ElasticSearchInstanceId"} },
+                  { "Name": "Filesystem", "Value": "/dev/xvda1"},
+                  { "Name": "MountPath", "Value": "/" }
+              ]
+           }
+        }
+    }
+}
