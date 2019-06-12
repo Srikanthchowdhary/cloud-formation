@@ -1,0 +1,144 @@
+{
+"AWSTemplateFormatVersion": "2010-09-09",
+    "Description": "Pool of Elastic Ip's",
+    "Metadata": {
+        "About": {
+             "Author": {"value": "DevOps Engineering Team"},
+             "CreatedDate": {"Value": "Oct 23, 2017"},
+             "Contact": {"Value": "cwdsdevopsengineering@osi.ca.gov"},
+             "UpdatedDate": {"Value": "November 01, 2017"}
+         }
+    },
+    "Resources": {    
+        "EIP1": {
+          "Type": "AWS::EC2::EIP",
+          "Properties": {
+            "Domain": "vpc"
+          }
+        },
+        "EIP2": {
+          "Type": "AWS::EC2::EIP",
+          "Properties": {
+            "Domain": "vpc"
+          }
+        },
+        "EIP3": {
+          "Type": "AWS::EC2::EIP",
+          "Properties": {
+            "Domain": "vpc"
+          }
+        },
+        "EIP4": {
+          "Type": "AWS::EC2::EIP",
+          "Properties": {
+            "Domain": "vpc"
+          }
+        },
+        "EIP5": {
+          "Type": "AWS::EC2::EIP",
+          "Properties": {
+            "Domain": "vpc"
+          }
+        },
+        "EIP6": {
+          "Type": "AWS::EC2::EIP",
+          "Properties": {
+            "Domain": "vpc"
+          }
+        },
+        "EIP7": {
+          "Type": "AWS::EC2::EIP",
+          "Properties": {
+            "Domain": "vpc"
+          }
+        },
+        "EIP8": {
+          "Type": "AWS::EC2::EIP",
+          "Properties": {
+            "Domain": "vpc"
+          }
+        }
+    },
+    "Outputs": {
+        "EIP1": {
+            "Description": "Prod Gateway Elastic IP",
+            "Value": { "Fn::Join": ["",[{"Ref":"EIP1"},"/","32"]]},
+            "Export": {"Name": { "Fn::Join": ["",["production-gateway","-","s2s1a"]]}}
+        },
+        "EIPAllocationId1": {
+            "Description": "Prod Gateway Elastic IP Allocation Id",
+            "Value": {"Fn::GetAtt" : ["EIP1", "AllocationId"]},
+            "Export": {"Name": { "Fn::Join": ["",["production-gateway","-","AllocationId-s2s1a"]]}}
+        },
+        "EIP2": {
+            "Description": "Prod Gateway Elastic IP",
+            "Value": { "Fn::Join": ["",[{"Ref":"EIP2"},"/","32"]]},
+            "Export": {"Name": { "Fn::Join": ["",["production-gateway","-","s2s1c"]]}}
+        },
+        "EIPAllocationId2": {
+            "Description": "Prod Gateway Elastic IP Allocation Id",
+            "Value": {"Fn::GetAtt" : ["EIP2", "AllocationId"]},
+            "Export": {"Name": { "Fn::Join": ["",["production-gateway","-","AllocationId-s2s1c"]]}}
+        },
+         "EIP3": {
+            "Description": "Prod Gateway Elastic IP",
+            "Value": { "Fn::Join": ["",[{"Ref":"EIP3"},"/","32"]]},
+            "Export": {"Name": { "Fn::Join": ["",["production-gateway","-","s2s2a"]]}}
+        },
+        "EIPAllocationId3": {
+            "Description": "Prod Gateway Elastic IP Allocation Id",
+            "Value": {"Fn::GetAtt" : ["EIP3", "AllocationId"]},
+            "Export": {"Name": { "Fn::Join": ["",["production-gateway","-","AllocationId-s2s2a"]]}}
+        },
+        "EIP4": {
+            "Description": "Prod Gateway Elastic IP",
+            "Value": { "Fn::Join": ["",[{"Ref":"EIP4"},"/","32"]]},
+            "Export": {"Name": { "Fn::Join": ["",["production-gateway","-","s2s2c"]]}}
+        },
+        "EIPAllocationId4": {
+            "Description": "Prod Gateway Elastic IP Allocation Id",
+            "Value": {"Fn::GetAtt" : ["EIP4", "AllocationId"]},
+            "Export": {"Name": { "Fn::Join": ["",["production-gateway","-","AllocationId-s2s2c"]]}}
+        },
+        "EIP5": {
+            "Description": "Web Gateway Elastic IP",
+            "Value": { "Fn::Join": ["",[{"Ref":"EIP5"},"/","32"]]},
+            "Export": {"Name": { "Fn::Join": ["",["production-gateway","-","web1a"]]}}
+        },
+        "EIPAllocationId5": {
+            "Description": "Web Gateway Elastic IP Allocation Id",
+            "Value": {"Fn::GetAtt" : ["EIP5", "AllocationId"]},
+            "Export": {"Name": { "Fn::Join": ["",["production-gateway","-","AllocationId-web1a"]]}}
+        },
+        "EIP6": {
+            "Description": "Web Gateway Elastic IP",
+            "Value": { "Fn::Join": ["",[{"Ref":"EIP6"},"/","32"]]},
+            "Export": {"Name": { "Fn::Join": ["",["production-gateway","-","web1c"]]}}
+        },
+        "EIPAllocationId6": {
+            "Description": "Web Gateway Elastic IP Allocation Id",
+            "Value": {"Fn::GetAtt" : ["EIP6", "AllocationId"]},
+            "Export": {"Name": { "Fn::Join": ["",["production-gateway","-","AllocationId-web1c"]]}}
+        },
+        "EIP7": {
+            "Description": "Non-prod Management VPN Elastic IP",
+            "Value": {"Ref":"EIP7"},
+            "Export": {"Name": { "Fn::Join": ["",["np-mgmt","-","vpn"]]}}
+        },
+        "EIPAllocationId7": {
+            "Description": "Non-prod Management Elastic IP Allocation Id",
+            "Value": {"Fn::GetAtt" : ["EIP7", "AllocationId"]},
+            "Export": {"Name": { "Fn::Join": ["",["np-mgmt","-","AllocationId-vpn"]]}}
+        },
+        "EIP8": {
+            "Description": "prod Management VPN Elastic IP",
+            "Value": {"Ref":"EIP8"},
+            "Export": {"Name": { "Fn::Join": ["",["prod-mgmt","-","vpn"]]}}
+        },
+        "EIPAllocationId8": {
+            "Description": "prod Management Elastic IP Allocation Id",
+            "Value": {"Fn::GetAtt" : ["EIP8", "AllocationId"]},
+            "Export": {"Name": { "Fn::Join": ["",["prod-mgmt","-","AllocationId-vpn"]]}}
+        }
+    }
+}

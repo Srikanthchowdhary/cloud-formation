@@ -1,0 +1,447 @@
+{
+    "AWSTemplateFormatVersion": "2010-09-09",
+    "Description": "Patch Management",
+    "Metadata": {
+        "About": {
+            "Author": {"value": "DevOps Engineering Team"},
+            "Contact": {"Value": "cwdsdevopsengineering@osi.ca.gov"},
+            "CreatedDate": {"Value": "September 13, 2018"},
+            "UpdatedDate": {"Value": "2018-10-04"}
+        }
+    },
+    "Mappings": {
+        "CustomVariables": {
+            "PatchBaselineName": {"Value": "dev-environments"},
+            "PatchGroups1": {"Value": "dev-group1"},
+            "PatchGroups2": {"Value": "dev-group2"},
+            "PatchGroups3": {"Value": "dev-group3"},
+            "ApproveAfterDays": {"Value": "7"},
+            "MaintenanceWindowTaskOperation": {"Value": "Install"}
+        }
+    },
+    "Resources": {
+        "PatchBaseline":{
+            "Type" : "AWS::SSM::PatchBaseline",
+            "Properties" : {
+              "Name": { "Fn::Join": ["-",[{ "Fn::FindInMap": ["CustomVariables", "PatchBaselineName","Value"]},"PatchBaseline" ]]},
+              "Description": { "Fn::Join": [" ",["SecurityPatch", "Updates", "_", { "Fn::FindInMap": ["CustomVariables", "PatchBaselineName","Value"]} ]]},
+              "OperatingSystem" : "AMAZON_LINUX",
+              "PatchGroups" : [
+                { "Fn::FindInMap": ["CustomVariables", "PatchGroups1","Value"]},
+                { "Fn::FindInMap": ["CustomVariables", "PatchGroups2","Value"]},
+                { "Fn::FindInMap": ["CustomVariables", "PatchGroups3","Value"]}
+              ],
+              "RejectedPatches": ["rundeck","rundeck-cli","rundeck-config"],
+              "GlobalFilters": {
+                  "PatchFilters": []
+              },
+              "Sources": [],
+              "ApprovedPatchesComplianceLevel" : "UNSPECIFIED",
+              "ApprovalRules" : {
+                "PatchRules": [
+                    {
+                        "PatchFilterGroup": {
+                            "PatchFilters": [ 
+                                {
+                                    "Values": ["*"],
+                                    "Key": "PRODUCT"
+                                },
+                                {
+                                    "Values": ["Security"],
+                                    "Key": "CLASSIFICATION"
+                                }
+                            ]
+                        },
+                        "ApproveAfterDays": { "Fn::FindInMap": ["CustomVariables", "ApproveAfterDays","Value"]},
+                        "ComplianceLevel": "UNSPECIFIED",
+                        "EnableNonSecurity": false
+                    },
+                    {
+                        "PatchFilterGroup": {
+                            "PatchFilters": [ 
+                                {
+                                    "Values": ["*"],
+                                    "Key": "PRODUCT"
+                                },
+                                {
+                                    "Values": ["Bugfix"],
+                                    "Key": "CLASSIFICATION"
+                                }
+                            ]
+                        },
+                        "ApproveAfterDays": { "Fn::FindInMap": ["CustomVariables", "ApproveAfterDays","Value"]},
+                        "ComplianceLevel": "UNSPECIFIED",
+                        "EnableNonSecurity": false
+                    }
+                ]
+              }
+            }
+          },
+          "MaintenanceWindow1": {
+                "Type" : "AWS::SSM::MaintenanceWindow",
+                "Properties" : {
+                    "Name": { "Fn::Join": ["-",[{ "Fn::FindInMap": ["CustomVariables", "PatchBaselineName","Value"]},"MaintenanceWindow","Group1","Schedule1"  ]]},
+                    "Description": { "Fn::Join": [" ",["MaintenanceWindow","Securitypatch","Updates",{ "Fn::FindInMap": ["CustomVariables", "PatchBaselineName","Value"]},"PatchGroup1","Schedule1" ]]},
+                    "AllowUnassociatedTargets" : true,
+                    "Cutoff" : 1,
+                    "Schedule" : "cron(0 01 1 * ? *)",
+                    "Duration" : 2
+                }              
+          },
+          "MaintenanceWindowTargets1": {
+              "Type" : "AWS::SSM::MaintenanceWindowTarget",
+              "Properties" : {
+                "Name": { "Fn::Join": ["-",["MaintenanceWindow-Targets",{ "Fn::FindInMap": ["CustomVariables", "PatchGroups1","Value"]},"Schedule1" ]]},
+                "Description" : { "Fn::Join": [" ",["MaintenanceWindow","Targets",{ "Fn::FindInMap": ["CustomVariables", "PatchGroups1","Value"]},"Schedule1" ]]},
+                "WindowId" : {"Ref": "MaintenanceWindow1"},
+                "ResourceType" : "INSTANCE",
+                "Targets" : [
+                    {
+                        "Values": [ 
+                            { "Fn::FindInMap": ["CustomVariables", "PatchGroups1","Value"]}
+                        ],
+                        "Key": "tag:Patch Group"
+                    }
+                ]
+              }
+          },
+          "MaintenanceWindowTask1": {
+              "Type" : "AWS::SSM::MaintenanceWindowTask",
+              "Properties" : {
+                  "Name" : { "Fn::Join": ["-",["MaintenanceWindow-Task",{ "Fn::FindInMap": ["CustomVariables", "PatchGroups1","Value"]},"Schedule1" ]]},
+                  "Description" : { "Fn::Join": [" ",["MaintenanceWindow","Task",{ "Fn::FindInMap": ["CustomVariables", "PatchGroups1","Value"]},"Schedule1" ]]},
+                  "WindowId" : {"Ref": "MaintenanceWindow1"},
+                  "TaskType" : "RUN_COMMAND",
+                  "TaskArn" : "AWS-RunPatchBaseline",
+                  "Priority" : 0,
+                  "Targets" : [
+                      {
+                          "Values": [{"Ref": "MaintenanceWindowTargets1"}],
+                          "Key": "WindowTargetIds"
+                      }  
+                  ],
+                  "MaxConcurrency" : "100%",
+                  "MaxErrors" : "20%",
+                  "ServiceRoleArn" : "arn:aws:iam::142152461930:role/SSMMaintenanceWindowRole",
+                  "TaskInvocationParameters": {
+                    "MaintenanceWindowRunCommandParameters": {
+                        "Comment": "",
+                        "OutputS3KeyPrefix": { "Fn::Join": ["/",["Securitypatches",{ "Fn::FindInMap": ["CustomVariables", "PatchBaselineName","Value"]},{ "Fn::FindInMap": ["CustomVariables", "PatchGroups1","Value"]} ]]},
+                        "OutputS3BucketName": "patch-management.cwds.io",
+                        "TimeoutSeconds": 600,
+                        "Parameters": {
+                            "Operation": [
+                                { "Fn::FindInMap": ["CustomVariables", "MaintenanceWindowTaskOperation","Value"]}
+                            ]
+                        }
+                    }
+                  }
+              }
+          },
+          "MaintenanceWindow2": {
+              "Type" : "AWS::SSM::MaintenanceWindow",
+              "Properties" : {
+                  "Name": { "Fn::Join": ["-",[{ "Fn::FindInMap": ["CustomVariables", "PatchBaselineName","Value"]},"MaintenanceWindow","Group2","Schedule1" ]]},
+                  "Description": { "Fn::Join": [" ",["MaintenanceWindow","Securitypatch","Updates",{ "Fn::FindInMap": ["CustomVariables", "PatchBaselineName","Value"]},"PatchGroup2","Schedule1" ]]},
+                  "AllowUnassociatedTargets" : true,
+                  "Cutoff" : 1,
+                  "Schedule" : "cron(0 02 1 * ? *)",
+                  "Duration" : 2
+              }              
+          },
+          "MaintenanceWindowTargets2": {
+                "Type" : "AWS::SSM::MaintenanceWindowTarget",
+                "Properties" : {
+                    "Name": { "Fn::Join": ["-",["MaintenanceWindow-Targets",{ "Fn::FindInMap": ["CustomVariables", "PatchGroups2","Value"]},"Schedule1" ]]},
+                    "Description" : { "Fn::Join": [" ",["MaintenanceWindow","Targets",{ "Fn::FindInMap": ["CustomVariables", "PatchGroups2","Value"]},"Schedule1" ]]},
+                    "WindowId" : {"Ref": "MaintenanceWindow2"},
+                    "ResourceType" : "INSTANCE",
+                    "Targets" : [
+                        {
+                            "Values": [ 
+                                { "Fn::FindInMap": ["CustomVariables", "PatchGroups2","Value"]}
+                            ],
+                            "Key": "tag:Patch Group"
+                        }
+                    ]
+                }
+          },
+          "MaintenanceWindowTask2": {
+            "Type" : "AWS::SSM::MaintenanceWindowTask",
+            "Properties" : {
+                "Name" : { "Fn::Join": ["-",["MaintenanceWindow-Task",{ "Fn::FindInMap": ["CustomVariables", "PatchGroups2","Value"]},"Schedule1" ]]},
+                "Description" : { "Fn::Join": [" ",["MaintenanceWindow","Task",{ "Fn::FindInMap": ["CustomVariables", "PatchGroups2","Value"]},"Schedule1" ]]},
+                "WindowId" : {"Ref": "MaintenanceWindow2"},
+                "TaskType" : "RUN_COMMAND",
+                "TaskArn" : "AWS-RunPatchBaseline",
+                "Priority" : 0,
+                "Targets" : [
+                    {
+                        "Values": [{"Ref": "MaintenanceWindowTargets2"}],
+                        "Key": "WindowTargetIds"
+                    }  
+                ],
+                "MaxConcurrency" : "100%",
+                "MaxErrors" : "20%",
+                "ServiceRoleArn" : "arn:aws:iam::142152461930:role/SSMMaintenanceWindowRole",
+                "TaskInvocationParameters": {
+                  "MaintenanceWindowRunCommandParameters": {
+                      "Comment": "",
+                      "OutputS3KeyPrefix": { "Fn::Join": ["/",["Securitypatches",{ "Fn::FindInMap": ["CustomVariables", "PatchBaselineName","Value"]},{ "Fn::FindInMap": ["CustomVariables", "PatchGroups2","Value"]} ]]},
+                      "OutputS3BucketName": "patch-management.cwds.io",
+                      "TimeoutSeconds": 600,
+                      "Parameters": {
+                          "Operation": [
+                              { "Fn::FindInMap": ["CustomVariables", "MaintenanceWindowTaskOperation","Value"]}
+                          ]
+                      }
+                  }
+                }
+            }
+          },
+          "MaintenanceWindow3": {
+              "Type" : "AWS::SSM::MaintenanceWindow",
+              "Properties" : {
+                  "Name": { "Fn::Join": ["-",[{ "Fn::FindInMap": ["CustomVariables", "PatchBaselineName","Value"]},"MaintenanceWindow","Group3","Schedule1" ]]},
+                  "Description": { "Fn::Join": [" ",["MaintenanceWindow","Securitypatch","Updates",{ "Fn::FindInMap": ["CustomVariables", "PatchBaselineName","Value"]},"PatchGroup3","Schedule1" ]]},
+                  "AllowUnassociatedTargets" : true,
+                  "Cutoff" : 1,
+                  "Schedule" : "cron(0 03 1 * ? *)",
+                  "Duration" : 2
+              }              
+          },
+          "MaintenanceWindowTargets3": {
+                "Type" : "AWS::SSM::MaintenanceWindowTarget",
+                "Properties" : {
+                    "Name": { "Fn::Join": ["-",["MaintenanceWindow-Targets",{ "Fn::FindInMap": ["CustomVariables", "PatchGroups3","Value"]},"Schedule1" ]]},
+                    "Description" : { "Fn::Join": [" ",["MaintenanceWindow","Targets",{ "Fn::FindInMap": ["CustomVariables", "PatchGroups3","Value"]},"Schedule1" ]]},
+                    "WindowId" : {"Ref": "MaintenanceWindow3"},
+                    "ResourceType" : "INSTANCE",
+                    "Targets" : [
+                        {
+                            "Values": [ 
+                                { "Fn::FindInMap": ["CustomVariables", "PatchGroups3","Value"]}
+                            ],
+                            "Key": "tag:Patch Group"
+                        }
+                    ]
+                }
+          },
+          "MaintenanceWindowTask3": {
+            "Type" : "AWS::SSM::MaintenanceWindowTask",
+            "Properties" : {
+                "Name" : { "Fn::Join": ["-",["MaintenanceWindow-Task",{ "Fn::FindInMap": ["CustomVariables", "PatchGroups3","Value"]},"Schedule1" ]]},
+                "Description" : { "Fn::Join": [" ",["MaintenanceWindow","Task",{ "Fn::FindInMap": ["CustomVariables", "PatchGroups3","Value"]},"Schedule1" ]]},
+                "WindowId" : {"Ref": "MaintenanceWindow3"},
+                "TaskType" : "RUN_COMMAND",
+                "TaskArn" : "AWS-RunPatchBaseline",
+                "Priority" : 0,
+                "Targets" : [
+                    {
+                        "Values": [{"Ref": "MaintenanceWindowTargets3"}],
+                        "Key": "WindowTargetIds"
+                    }  
+                ],
+                "MaxConcurrency" : "100%",
+                "MaxErrors" : "20%",
+                "ServiceRoleArn" : "arn:aws:iam::142152461930:role/SSMMaintenanceWindowRole",
+                "TaskInvocationParameters": {
+                  "MaintenanceWindowRunCommandParameters": {
+                      "Comment": "",
+                      "OutputS3KeyPrefix": { "Fn::Join": ["/",["Securitypatches",{ "Fn::FindInMap": ["CustomVariables", "PatchBaselineName","Value"]},{ "Fn::FindInMap": ["CustomVariables", "PatchGroups3","Value"]} ]]},
+                      "OutputS3BucketName": "patch-management.cwds.io",
+                      "TimeoutSeconds": 600,
+                      "Parameters": {
+                          "Operation": [
+                              { "Fn::FindInMap": ["CustomVariables", "MaintenanceWindowTaskOperation","Value"]}
+                          ]
+                      }
+                  }
+                }
+            }
+          },
+          "MaintenanceWindow4": {
+              "Type" : "AWS::SSM::MaintenanceWindow",
+              "Properties" : {
+                  "Name": { "Fn::Join": ["-",[{ "Fn::FindInMap": ["CustomVariables", "PatchBaselineName","Value"]},"MaintenanceWindow","Group1","Schedule2" ]]},
+                  "Description": { "Fn::Join": [" ",["MaintenanceWindow","Securitypatch","Updates",{ "Fn::FindInMap": ["CustomVariables", "PatchBaselineName","Value"]},"PatchGroup1","Schedule2" ]]},
+                  "AllowUnassociatedTargets" : true,
+                  "Cutoff" : 1,
+                  "Schedule" : "cron(0 01 15 * ? *)",
+                  "Duration" : 2
+              }              
+        },
+        "MaintenanceWindowTargets4": {
+            "Type" : "AWS::SSM::MaintenanceWindowTarget",
+            "Properties" : {
+              "Name": { "Fn::Join": ["-",["MaintenanceWindow-Targets",{ "Fn::FindInMap": ["CustomVariables", "PatchGroups1","Value"]},"Schedule2" ]]},
+              "Description" : { "Fn::Join": [" ",["MaintenanceWindow","Targets",{ "Fn::FindInMap": ["CustomVariables", "PatchGroups1","Value"]},"Schedule2" ]]},
+              "WindowId" : {"Ref": "MaintenanceWindow4"},
+              "ResourceType" : "INSTANCE",
+              "Targets" : [
+                  {
+                      "Values": [ 
+                          { "Fn::FindInMap": ["CustomVariables", "PatchGroups1","Value"]}
+                      ],
+                      "Key": "tag:Patch Group"
+                  }
+              ]
+            }
+        },
+        "MaintenanceWindowTask4": {
+            "Type" : "AWS::SSM::MaintenanceWindowTask",
+            "Properties" : {
+                "Name" : { "Fn::Join": ["-",["MaintenanceWindow-Task",{ "Fn::FindInMap": ["CustomVariables", "PatchGroups1","Value"]},"Schedule2" ]]},
+                "Description" : { "Fn::Join": [" ",["MaintenanceWindow","Task",{ "Fn::FindInMap": ["CustomVariables", "PatchGroups1","Value"]},"Schedule2" ]]},
+                "WindowId" : {"Ref": "MaintenanceWindow4"},
+                "TaskType" : "RUN_COMMAND",
+                "TaskArn" : "AWS-RunPatchBaseline",
+                "Priority" : 0,
+                "Targets" : [
+                    {
+                        "Values": [{"Ref": "MaintenanceWindowTargets4"}],
+                        "Key": "WindowTargetIds"
+                    }  
+                ],
+                "MaxConcurrency" : "100%",
+                "MaxErrors" : "20%",
+                "ServiceRoleArn" : "arn:aws:iam::142152461930:role/SSMMaintenanceWindowRole",
+                "TaskInvocationParameters": {
+                  "MaintenanceWindowRunCommandParameters": {
+                      "Comment": "",
+                      "OutputS3KeyPrefix": { "Fn::Join": ["/",["Securitypatches",{ "Fn::FindInMap": ["CustomVariables", "PatchBaselineName","Value"]},{ "Fn::FindInMap": ["CustomVariables", "PatchGroups1","Value"]} ]]},
+                      "OutputS3BucketName": "patch-management.cwds.io",
+                      "TimeoutSeconds": 600,
+                      "Parameters": {
+                          "Operation": [
+                              { "Fn::FindInMap": ["CustomVariables", "MaintenanceWindowTaskOperation","Value"]}
+                          ]
+                      }
+                  }
+                }
+            }
+        },
+        "MaintenanceWindow5": {
+            "Type" : "AWS::SSM::MaintenanceWindow",
+            "Properties" : {
+                "Name": { "Fn::Join": ["-",[{ "Fn::FindInMap": ["CustomVariables", "PatchBaselineName","Value"]},"MaintenanceWindow","Group2","Schedule2" ]]},
+                "Description": { "Fn::Join": [" ",["MaintenanceWindow","Securitypatch","Updates",{ "Fn::FindInMap": ["CustomVariables", "PatchBaselineName","Value"]},"PatchGroup2","Schedule2" ]]},
+                "AllowUnassociatedTargets" : true,
+                "Cutoff" : 1,
+                "Schedule" : "cron(0 02 15 * ? *)",
+                "Duration" : 2
+            }              
+        },
+        "MaintenanceWindowTargets5": {
+              "Type" : "AWS::SSM::MaintenanceWindowTarget",
+              "Properties" : {
+                  "Name": { "Fn::Join": ["-",["MaintenanceWindow-Targets",{ "Fn::FindInMap": ["CustomVariables", "PatchGroups2","Value"]},"Schedule2" ]]},
+                  "Description" : { "Fn::Join": [" ",["MaintenanceWindow","Targets",{ "Fn::FindInMap": ["CustomVariables", "PatchGroups2","Value"]},"Schedule2" ]]},
+                  "WindowId" : {"Ref": "MaintenanceWindow5"},
+                  "ResourceType" : "INSTANCE",
+                  "Targets" : [
+                      {
+                          "Values": [ 
+                              { "Fn::FindInMap": ["CustomVariables", "PatchGroups2","Value"]}
+                          ],
+                          "Key": "tag:Patch Group"
+                      }
+                  ]
+              }
+        },
+        "MaintenanceWindowTask5": {
+          "Type" : "AWS::SSM::MaintenanceWindowTask",
+          "Properties" : {
+              "Name" : { "Fn::Join": ["-",["MaintenanceWindow-Task",{ "Fn::FindInMap": ["CustomVariables", "PatchGroups2","Value"]},"Schedule2" ]]},
+              "Description" : { "Fn::Join": [" ",["MaintenanceWindow","Task",{ "Fn::FindInMap": ["CustomVariables", "PatchGroups2","Value"]},"Schedule2" ]]},
+              "WindowId" : {"Ref": "MaintenanceWindow5"},
+              "TaskType" : "RUN_COMMAND",
+              "TaskArn" : "AWS-RunPatchBaseline",
+              "Priority" : 0,
+              "Targets" : [
+                  {
+                      "Values": [{"Ref": "MaintenanceWindowTargets5"}],
+                      "Key": "WindowTargetIds"
+                  }  
+             ],
+              "MaxConcurrency" : "100%",
+              "MaxErrors" : "20%",
+              "ServiceRoleArn" : "arn:aws:iam::142152461930:role/SSMMaintenanceWindowRole",
+              "TaskInvocationParameters": {
+                "MaintenanceWindowRunCommandParameters": {
+                    "Comment": "",
+                    "OutputS3KeyPrefix": { "Fn::Join": ["/",["Securitypatches",{ "Fn::FindInMap": ["CustomVariables", "PatchBaselineName","Value"]},{ "Fn::FindInMap": ["CustomVariables", "PatchGroups2","Value"]} ]]},
+                    "OutputS3BucketName": "patch-management.cwds.io",
+                    "TimeoutSeconds": 600,
+                    "Parameters": {
+                        "Operation": [
+                            { "Fn::FindInMap": ["CustomVariables", "MaintenanceWindowTaskOperation","Value"]}
+                        ]
+                    }
+                }
+              }
+          }
+      },
+      "MaintenanceWindow6": {
+          "Type" : "AWS::SSM::MaintenanceWindow",
+          "Properties" : {
+              "Name": { "Fn::Join": ["-",[{ "Fn::FindInMap": ["CustomVariables", "PatchBaselineName","Value"]},"MaintenanceWindow","Group3","Schedule2" ]]},
+              "Description": { "Fn::Join": [" ",["MaintenanceWindow","Securitypatch","Updates",{ "Fn::FindInMap": ["CustomVariables", "PatchBaselineName","Value"]},"PatchGroup2","Schedule2" ]]},
+              "AllowUnassociatedTargets" : true,
+              "Cutoff" : 1,
+              "Schedule" : "cron(0 03 15 * ? *)",
+              "Duration" : 2
+          }              
+      },
+      "MaintenanceWindowTargets6": {
+            "Type" : "AWS::SSM::MaintenanceWindowTarget",
+            "Properties" : {
+                "Name": { "Fn::Join": ["-",["MaintenanceWindow-Targets",{ "Fn::FindInMap": ["CustomVariables", "PatchGroups3","Value"]},"Schedule2" ]]},
+                "Description" : { "Fn::Join": [" ",["MaintenanceWindow","Targets",{ "Fn::FindInMap": ["CustomVariables", "PatchGroups3","Value"]},"Schedule2" ]]},
+                "WindowId" : {"Ref": "MaintenanceWindow6"},
+                "ResourceType" : "INSTANCE",
+                "Targets" : [
+                    {
+                        "Values": [ 
+                            { "Fn::FindInMap": ["CustomVariables", "PatchGroups3","Value"]}
+                        ],
+                        "Key": "tag:Patch Group"
+                    }
+                ]
+            }
+      },
+      "MaintenanceWindowTask6": {
+        "Type" : "AWS::SSM::MaintenanceWindowTask",
+        "Properties" : {
+            "Name" : { "Fn::Join": ["-",["MaintenanceWindow-Task",{ "Fn::FindInMap": ["CustomVariables", "PatchGroups3","Value"]},"Schedule2" ]]},
+            "Description" : { "Fn::Join": [" ",["MaintenanceWindow","Task",{ "Fn::FindInMap": ["CustomVariables", "PatchGroups3","Value"]},"Schedule2" ]]},
+            "WindowId" : {"Ref": "MaintenanceWindow6"},
+            "TaskType" : "RUN_COMMAND",
+            "TaskArn" : "AWS-RunPatchBaseline",
+            "Priority" : 0,
+            "Targets" : [
+                {
+                    "Values": [{"Ref": "MaintenanceWindowTargets6"}],
+                    "Key": "WindowTargetIds"
+                }   
+            ],
+            "MaxConcurrency" : "100%",
+            "MaxErrors" : "20%",
+            "ServiceRoleArn" : "arn:aws:iam::142152461930:role/SSMMaintenanceWindowRole",
+            "TaskInvocationParameters": {
+              "MaintenanceWindowRunCommandParameters": {
+                  "Comment": "",
+                  "OutputS3KeyPrefix": { "Fn::Join": ["/",["Securitypatches",{ "Fn::FindInMap": ["CustomVariables", "PatchBaselineName","Value"]},{ "Fn::FindInMap": ["CustomVariables", "PatchGroups3","Value"]} ]]},
+                  "OutputS3BucketName": "patch-management.cwds.io",
+                  "TimeoutSeconds": 600,
+                  "Parameters": {
+                      "Operation": [
+                          { "Fn::FindInMap": ["CustomVariables", "MaintenanceWindowTaskOperation","Value"]}
+                      ]
+                  }
+              }
+            }
+        }
+      }
+    }
+}

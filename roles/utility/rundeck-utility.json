@@ -1,0 +1,113 @@
+{
+    "AWSTemplateFormatVersion": "2010-09-09",
+    "Description": "Rundeck Server for Utility",
+    "Metadata": {
+        "About": {
+            "Author": {"value": "DevOps Engineering Team"},
+            "CreatedDate": {"Value": "October 22, 2018"},
+            "Contact": {"Value": "cwdsdevopsengineering@osi.ca.gov"},
+            "UpdatedDate": {"Value": "October 23, 2018"}
+        }
+    },
+    "Mappings": {
+        "CustomParameters": {
+			"EnvName":{"Value":"utility"},
+            "VPC":{"Value":"vpc-bda4add9"},
+            "PrivateSubnet":{"Value":"subnet-78b4011f"},
+			"InstanceType" : {"Value":"t2.medium"},
+            "ImageID" : {"Value":"ami-c16755a1"},
+            "KeyPair" : {"Value":"cwds-utility-keypair"},
+            "OpenVPNCidrIngress":{"Value":"sg-35cb1852"},
+            "VolumeSize": {"Value":"100"},
+            "VolumeType": {"Value":"gp2"},
+            "HostedZoneName": {"Value": "cwds.io"}
+        }
+    },
+    "Resources" :
+    {
+        "RundeckUtilitySg": {
+            "Type": "AWS::EC2::SecurityGroup",
+            "Properties": {
+                "GroupDescription": "Security Group for Rundeck Utility",
+                "VpcId": { "Fn::FindInMap" : ["CustomParameters","VPC","Value"] },
+                "SecurityGroupIngress": [
+                    {
+                        "IpProtocol" : "tcp",
+                        "FromPort": "22",
+                        "ToPort" : "22",
+                        "SourceSecurityGroupId" : { "Fn::FindInMap" : ["CustomParameters","OpenVPNCidrIngress","Value"] }
+                    },
+                    {
+                    "IpProtocol" : "tcp",
+                    "FromPort": "4443",
+                    "ToPort" : "4443",
+                    "SourceSecurityGroupId" : { "Fn::FindInMap" : ["CustomParameters","OpenVPNCidrIngress","Value"] }
+                    }],
+    
+                "Tags": [
+                  {"Key": "Environment", "Value": {"Fn::FindInMap": ["CustomParameters","EnvName","Value"]}},
+                  {"Key": "Name", "Value":  { "Fn::Join": ["",["RundeckUtilitySg","-",{"Fn::FindInMap": ["CustomParameters", "EnvName","Value"]}]]}}
+                ]
+            }
+        },
+
+        "RundeckUtilityInstance": {
+            "Type": "AWS::EC2::Instance",
+            "Properties":{
+                "ImageId": {"Fn::FindInMap": ["CustomParameters","ImageID","Value"]},
+                "InstanceType": {"Fn::FindInMap": ["CustomParameters","InstanceType","Value"]},
+                "SubnetId": {"Fn::FindInMap": ["CustomParameters","PrivateSubnet","Value"]},
+                "IamInstanceProfile": "Cloudwatch",
+                "Monitoring": "true",
+                "KeyName": {"Fn::FindInMap": ["CustomParameters","KeyPair","Value"]},
+                "InstanceInitiatedShutdownBehavior": "stop",
+                "DisableApiTermination": "false",
+                "SecurityGroupIds": [{ "Ref" : "RundeckUtilitySg"}],
+               "Tags": [
+                  {"Key": "Environment", "Value": {"Fn::FindInMap": ["CustomParameters","EnvName","Value"]}},
+                  {"Key": "Name", "Value":  { "Fn::Join": ["",["Rundeck","-",{"Fn::FindInMap": ["CustomParameters","EnvName","Value"]}]]}}
+              ]
+            }
+        },
+
+        "UtilityRundeckVolume": {
+			"Type" : "AWS::EC2::Volume",
+			"Properties" : {
+                "Encrypted" : "True",
+                "KmsKeyId" : {"Fn::ImportValue" : {"Fn::Sub" : "utility-KMSKeyID"}},
+				"Size" : {"Fn::FindInMap": ["CustomParameters", "VolumeSize","Value"]},
+				"VolumeType": {"Fn::FindInMap": ["CustomParameters", "VolumeType","Value"]},
+				"AvailabilityZone" : { "Fn::GetAtt" : [ "RundeckUtilityInstance", "AvailabilityZone" ] }
+			}
+		},
+		"UtilityRundeckVolumeAttachment" : {
+			"Type" : "AWS::EC2::VolumeAttachment",
+			"Properties" : {
+				"InstanceId" : { "Ref" : "RundeckUtilityInstance" },
+				"VolumeId"  : { "Ref" : "UtilityRundeckVolume" },
+				"Device" : "/dev/xvdh"
+			}
+        },
+        
+        "RundeckDNSRoute53": {
+			"Type": "AWS::Route53::RecordSet",
+			"Properties": {
+                "Name": { "Fn::Join": ["",["rundeck",".",{"Fn::FindInMap": ["CustomParameters", "EnvName","Value"]},".",{"Fn::FindInMap": ["CustomParameters", "HostedZoneName","Value"]}]]}, 
+                "Type": "A",
+                "Comment": "Rundeck Utility Instance",
+                "HostedZoneName": { "Fn::Join": ["",[{"Fn::FindInMap": ["CustomParameters", "HostedZoneName","Value"]},"."]]},
+                "ResourceRecords": [ {"Fn::GetAtt": ["RundeckUtilityInstance", "PrivateIp"]} ],
+                "TTL": "360"
+            }
+        }
+
+    },
+
+    "Outputs": {
+        "RundeckUtilityInstance": {
+            "Description": "Rundeck Server Private IP",
+            "Value": {"Fn::GetAtt": ["RundeckUtilityInstance","PrivateIp"]},
+            "Export": { "Name": { "Fn::Join": ["",["Rundeck","-",{"Fn::FindInMap": ["CustomParameters", "EnvName","Value"]}]]}}
+        }
+    }
+}

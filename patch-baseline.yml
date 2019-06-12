@@ -1,0 +1,8 @@
+---
+- name: Creates or updates Patch Management templates
+  hosts: stack
+  become: yes
+  vars:
+     git_remote_branch : "{{GIT_REMOTEBRANCH}}"
+  roles:
+    - patch-management/security-patches

@@ -1,0 +1,30 @@
+IAM Policies for managing access.
+
+All IAM or S3 policies created henceforth, should be added to the policies directory and this README must be updated with relevant information about the added policies.
+
+Naming Convention
+
+Please follow the standard naming convention for policies: <ResourceType-ResourceName-Group/User>.json
+
+AWS Cloudformation Policy for Non-Prod Access
+
+Object level Access to NonProd functional User
+
+Policy name: AWSCloudformationNonProd
+Privileges: Describe, Create, Execute, Validate
+s3-static.cwds.io-DevGroupAccess.json
+
+Object level access to static.cwds.io S3 Bucket for the W3 Development team.
+
+Custom group level policy created for CWDSWebDevelopmentTeam.
+Policy name: S3-static.cwds.io-DevGroupAccess
+Bucket name: static.cwds.io
+Privileges: List, Create, Read, Write, Delete
+s3-static.cwds.io-FullAccess.json
+
+Full access to all resources in static.cwds.io S3 bucket to W3 Development Team.
+
+Custom group level policy created for CWDSWebDevelopmentTeam.
+Policy name: S3-static.cwds.io-FullAccess
+Bucket name: static.cwds.io
+Privileges: Full Access - Enables programmatic and API level access to objects in the bucket.

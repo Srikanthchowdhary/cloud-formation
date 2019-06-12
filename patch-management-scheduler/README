@@ -1,0 +1,87 @@
+Patch Management Templates
+
+Patch Management are versioned on github and the templates are categorized / branched based on the environment types.
+
+Contents
+
+Environment Types
+Dependencies
+Patch Management Scheduler
+Environment Types:
+
+Dev Environments
+
+Environments under Dev Environments category are listed below:
+
+preint
+integration
+sandboxcans
+cogsandbox
+Stable Environments
+
+Environments under Stable Environments category are listed below:
+
+Staging
+performance
+demo-int
+training
+Production Environments
+
+Environments under Production Environments category are listed below:
+
+preprod
+prod-dc
+np-mgmt environment:
+
+np-mgmt environment has ELK stack, openvpn, rundeck servers, ldap servers
+
+prod-mgmt environment
+
+prod-mgmt env has ELK stack, openvpn, rundeck servers
+
+nonprod-dcgateway
+
+This environment holds web servers, s2s servers for db connectivity
+
+prod-dcgateway
+
+This environment holds web servers, s2s servers for db connectivity
+
+Dependencies
+
+Assumes ssm agents installed in the servers (ec2-instances) and running
+Assumes Cloudformation templates updated so that all the instances has a Tag Value Patch Group
+Scheduler for Patch Management
+
+Patch Updates
+
+All Servers are updated with security patches and bug fixes twice in a month
+Schedule1:
+
+Dev Environments: 1st day in a month between 1am - 4am
+Stable Environments: 5th of every month between 1am - 4am
+np-mgmt environment: 8th of every month between 1am - 4am
+non-prod dcgateway: 8th of every month between 1am - 4am
+Production Environments: 11th of every month between 1am-4am
+prod-mgmt environment: 13th of every month between 1am-4am
+prod-dc gateway : 13th of every month between 1am-4am
+Schedule2:
+
+Dev Environments: 15th day in a month between 1am - 4am
+Stable Environments: 19th day in a month between 1am - 4am
+np-mgmt environment: 22nd of every month between 1am - 4am
+non-prod dcgateway: 22nd of every month between 1am - 4am
+Production Environments: 25th of every month between 1am-4am
+prod-mgmt environment: 27th of every month between 1am-4am
+prod-dc gateway : 27th of every month between 1am-4am
+Approval Delay (Update frequency)
+
+The number of days to wait after a patch is released before a patch is automatically approved.
+The approval Delay is different for the environment types so that the same patches are updated.
+Dev Environments: Approval Delay 7 days in patch Baseline
+Stable Environments: Approval Delay 11 days in patch Baseline
+np-mgmt environment: Approval Delay 14 days in patch Baseline
+non-prod dcgateway: Approval Delay 14 days in patch Baseline
+Production Environments: Approval Delay 17 days in patch Baseline
+prod-mgmt environment: 19th of every month between 1am-4am
+prod-dc gateway : 19th of every month between 1am-4am

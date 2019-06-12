@@ -1,0 +1,87 @@
+---
+- name: install python components
+  pip:
+    name: "{{item}}"
+  with_items:
+    - boto
+    - boto3
+    - botocore
+
+- name: register the environment
+  command: "echo {{ hostvars[groups['stack'][0]]['environment_name'] }} "
+  register: env_name
+
+#- debug: msg={{env_name.stdout}}
+
+- name: clean the de-cloudformation artifact
+  file:
+    state: absent
+    path: "{item}"
+  with_items:
+    - /opt/repos
+
+- name: Ensure that the repos directory exists
+  file:
+    path: /opt/repos
+    state: directory
+    mode: 0754
+    owner: ansible
+    group: ansible
+
+- name: Ensure Cloudformation Directory exists
+  file:
+    path: /opt/cloudformation
+    state: directory
+    mode: 0755
+    owner: ansible
+    group: ansible
+
+- name: Ensure that the Environment directory exists in /opt/cloudformation
+  file:
+    path: /opt/cloudformation/{{env_name.stdout}}
+    state: directory
+    mode: 0755
+    owner: ansible
+    group: ansible
+
+- name: Copy the templates
+  template:
+    src: "{{ item.name }}"
+    dest: /opt/cloudformation/{{env_name.stdout}}/{{item.template_filename}}
+    force: true
+    owner: ansible
+    group: ansible
+  with_items:
+    - {name: templates/cf-vpc.json, template_filename: "cf-{{env_name.stdout}}-vpc.json" }
+
+- name: clone the cloudformation repository
+  git:
+    repo: 'git@github.com:ca-cwds/de-cloudformation.git'
+    dest: /opt/repos/de-cloudformation
+    clone: yes
+    version: "{{ item }}"
+  become: yes
+  become_user: ansible
+  with_items: "{{git_remote_branch}}"
+
+- name: ensure the environment directory exists in the git repo
+  file: 
+    path: /opt/repos/de-cloudformation/environments/{{env_name.stdout}}
+    state: directory
+    owner: ansible
+    group: ansible
+
+- name: copy the generated templates to git
+  shell: "cp /opt/cloudformation/{{env_name.stdout}}/* /opt/repos/de-cloudformation/environments/{{env_name.stdout}}/."
+
+- name: upload cf templates to s3
+  aws_s3:
+    bucket: cwds-cloudformation
+    region: us-west-1
+    mode: put
+    object: /Environments/{{env_name.stdout}}/{{ item.name }}
+    src: "{{ item.path }}"
+    aws_access_key: "{{ hostvars[groups['credentials'][0]]['aws_key_id'] }}"
+    aws_secret_key: "{{ hostvars[groups['credentials'][0]]['aws_access_key'] }}"
+  with_items:
+    - { name: "cf-{{env_name.stdout}}-vpc.json", path: "/opt/cloudformation/{{env_name.stdout}}/cf-{{env_name.stdout}}-vpc.json" }

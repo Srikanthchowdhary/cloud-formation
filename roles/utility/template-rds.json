@@ -1,0 +1,138 @@
+{
+  "AWSTemplateFormatVersion" : "2010-09-09",
+  "Description" : "AWS CloudFormation Db2, Elastic Search, ElastiCache_Redis and Postgres RDS",
+  "Metadata": {
+      "About": {
+          "Author": {"Value": "DevOps Engineering Team"},
+          "CreatedDate": {"Value": "November 15, 2017"},
+          "Contact": {"Value": "cwdsdevopsengineering@osi.ca.gov"},
+          "UpdatedDate": {"Value": "November 15, 2017"}
+        }
+  },
+  "Parameters": {
+		"DBPassword": {
+			"Description": "Postgres Database admin account Password",
+            "NoEcho": "true",
+            "Type": "String",
+            "MinLength": "1",
+            "MaxLength": "20",
+            "ConstraintDescription": "Must Begin with a letter and contain only alphanumeric characters."
+		},
+        "PostgresReadReplica": {
+			"Description": "Postgres read replication",
+            "Type": "String",
+            "Default": "false",
+            "AllowedValues" : ["false", "true"]
+		}
+  },
+  "Conditions": {
+      "create-PostgresReadReplica": {"Fn::Equals": [{"Ref": "PostgresReadReplica"}, "true"]}
+  },
+  "Mappings":{
+		"CustomVariables": { 
+			"EnvName": {"Value": "utility"},
+			"RegionAZNameA": {"Value":"us-west-1a"},
+			"RegionAZNameC": {"Value":"us-west-1c"},
+			"PrivateCidr1A": {"Value":"subnet-78b4011f"},
+			"PrivateCidr1C": {"Value":"subnet-9ba953c0"},
+            "DBInstancetype": {"Value": "db.t2.small"},
+			"DBAllocatedStorage": {"Value": "100"},
+			"Iops": {"Value": "1000"},
+			"InstanceIdentifier":{"Value":"postgres-app-utility"},
+			"DBUsername":{"Value":"utility_postgres"},
+			"DBName": {"Value": "pgutilitydb"},
+            "postgressg": {"Value": "sg-2f527c49"},
+			"HostedZoneName": {"Value": "cwds.io"}
+		}
+  },
+  "Resources" : {   
+      "DBParameterGroup": {
+           "Type": "AWS::RDS::DBParameterGroup",
+           "Properties": {
+               "Description": "Postgres RDS Parameter Group",
+               "Family": "postgres9.6",
+               "Parameters": {
+                 "max_prepared_transactions": 50
+               },
+               "Tags": [
+                   {"Key": "Name",	"Value":  { "Fn::Join": ["",[{ "Fn::FindInMap": ["CustomVariables", "EnvName", "Value"]},"-","postgres"]]}},
+                   {"Key": "Environment", "Value": { "Fn::FindInMap": ["CustomVariables", "EnvName", "Value"]}}
+               ]
+           }
+      },
+      "SubnetGroup": {
+           "Type" : "AWS::RDS::DBSubnetGroup",
+           "Properties": {
+               "DBSubnetGroupDescription": "DB Private Instances Subnet Group",
+               "SubnetIds": [
+                   { "Fn::FindInMap": ["CustomVariables", "PrivateCidr1A", "Value"]},
+                   { "Fn::FindInMap": ["CustomVariables", "PrivateCidr1C", "Value"]}
+               ]
+           }
+      },
+      "PostgresDBInstance": {
+           "Type": "AWS::RDS::DBInstance",
+           "Properties": {
+               "Engine": "postgres",
+               "EngineVersion": "9.6.1",
+               "DBParameterGroupName": {"Ref": "DBParameterGroup"},
+               "DBInstanceClass": { "Fn::FindInMap": ["CustomVariables", "DBInstancetype", "Value"]},
+               "MultiAZ": "true",
+               "StorageType": "gp2",
+               "AllocatedStorage": { "Fn::FindInMap": ["CustomVariables", "DBAllocatedStorage", "Value"]},
+               "DBInstanceIdentifier": { "Fn::FindInMap": ["CustomVariables", "InstanceIdentifier", "Value"]},
+               "MasterUsername": { "Fn::FindInMap": ["CustomVariables", "DBUsername", "Value"]},
+               "MasterUserPassword": {"Ref": "DBPassword"},
+               "DBSubnetGroupName": {"Ref": "SubnetGroup"},
+               "PubliclyAccessible": "false",
+               "VPCSecurityGroups": [{ "Fn::FindInMap": ["CustomVariables", "postgressg", "Value"]}],
+               "DBName": { "Fn::FindInMap": ["CustomVariables", "DBName", "Value"]},
+               "BackupRetentionPeriod": "15",
+               "PreferredBackupWindow": "09:00-12:00",
+               "AllowMajorVersionUpgrade"	: "false",
+               "AutoMinorVersionUpgrade": "false",
+               "PreferredMaintenanceWindow": "sun:07:00-sun:09:00",
+               "Tags" :  [
+                   {"Key": "Environment", "Value": { "Fn::FindInMap": ["CustomVariables", "EnvName", "Value"]}},                     
+                   { "Key"  : "Name", "Value":  { "Fn::Join": ["",[{ "Fn::FindInMap": ["CustomVariables", "EnvName", "Value"]},"-","MasterDB"]]} }
+               ]
+           }
+      },
+      "ReplicaDB": {
+           "Type" : "AWS::RDS::DBInstance",
+           "Condition": "create-PostgresReadReplica",
+           "Properties" : {
+               "SourceDBInstanceIdentifier" : { "Ref" : "PostgresDBInstance" },
+               "DBInstanceClass" : { "Fn::FindInMap": ["CustomVariables", "DBInstancetype", "Value"]},
+               "Tags" : [
+                   { "Key"  : "Name", "Value":  { "Fn::Join": ["",[{ "Fn::FindInMap": ["CustomVariables", "EnvName", "Value"]},"-","ReadReplicaDB"]]} },
+                   {"Key": "Environment", "Value": { "Fn::FindInMap": ["CustomVariables", "EnvName", "Value"]}}
+               ]                 
+           }
+      },
+      "PostgresRDSRoute53RS": {
+            "Type": "AWS::Route53::RecordSet",
+            "Properties": {
+                "Name": { "Fn::Join": ["",["postgresql",".",{ "Fn::FindInMap": ["CustomVariables", "EnvName", "Value"]},".",{ "Fn::FindInMap": ["CustomVariables", "HostedZoneName", "Value"]}]]},
+                "Type": "CNAME",
+                "Comment": "Postgres Docker db2 recordset",
+                "HostedZoneName": { "Fn::Join": ["",[{ "Fn::FindInMap": ["CustomVariables", "HostedZoneName", "Value"]},"."]]},
+                "ResourceRecords": [ { "Fn::GetAtt": ["PostgresDBInstance","Endpoint.Address"]} ],
+                "TTL": "60"
+            }
+        }
+  },
+  
+  "Outputs": {
+      
+      "PostgresEndPoint": {
+           "Description": "creates postgres rds endpoint if exists",
+           "Value": { "Fn::GetAtt": ["PostgresDBInstance","Endpoint.Address"]},
+           "Export": { "Name": { "Fn::Join": ["",[{ "Fn::FindInMap": ["CustomVariables", "EnvName", "Value"]},"-","postgresRDS"]]}}
+       },
+       "PostgresRDSRoute53RS": {
+            "Description": "postgresql RDS server DNS name ",
+            "Value": {"Ref": "PostgresRDSRoute53RS"} 
+        }
+  }
+}

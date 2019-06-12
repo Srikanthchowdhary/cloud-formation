@@ -1,0 +1,73 @@
+{
+    "AWSTemplateFormatVersion": "2010-09-09",
+    "Description": "Security Groups",
+    "Metadata": {
+        "About": {
+            "Author": {"value": "DevOps Engineering Team"},
+            "CreatedDate": {"Value": "June 05, 2017"},
+            "Contact": {"Value": "cwdsdevopsengineering@osi.ca.gov"},
+            "UpdatedDate": {"Value": "October 22, 2018"}
+        }
+    },
+    "Mappings": {
+        "CustomVariables": {
+            "EnvName": {"Value": "utility"},
+            "VpcID": {"Value": "vpc-bda4add9"},
+            "OpenVpnSg": {"Value":"sg-35cb1852"},
+            "RundeckSg" : {"Value" : "sg-0653da74e015232b2"}
+        }
+    },
+    "Resources": {
+
+        "ManagedServerRules": {
+            "Type": "AWS::EC2::SecurityGroup",
+            "Properties": {
+                "GroupDescription": "Managed Server Security Group",
+                "VpcId": { "Fn::FindInMap": ["CustomVariables", "VpcID", "Value"]},
+                "SecurityGroupIngress": [
+                    {
+                        "IpProtocol": "tcp",
+                        "FromPort": "22",
+                        "ToPort": "22",
+                        "SourceSecurityGroupId": { "Fn::FindInMap": ["CustomVariables", "OpenVpnSg", "Value"]}
+                    }
+                ],
+                "Tags": [
+                  {"Key": "Environment", "Value": { "Fn::FindInMap": ["CustomVariables", "EnvName", "Value"]}},
+                  {"Key": "Role", "Value": "security-groups"},
+                  {"Key": "Name", "Value":  { "Fn::Join": ["",[{ "Fn::FindInMap": ["CustomVariables", "EnvName", "Value"]},"-","mgmt-Server-rules-sg"]]}}
+                ]
+            }
+        },
+
+        "postgressg" : {
+          "Type" : "AWS::EC2::SecurityGroup",
+          "Properties" : {
+            "GroupDescription" : "Postgres RDS Security Group",
+            "SecurityGroupIngress" : [  
+                { "SourceSecurityGroupId": { "Fn::FindInMap": ["CustomVariables", "OpenVpnSg", "Value"]}, "IpProtocol": "tcp", "FromPort": "5432","ToPort": "5432"},
+                { "SourceSecurityGroupId": { "Fn::FindInMap": ["CustomVariables", "RundeckSg", "Value"]}, "IpProtocol": "tcp", "FromPort": "5432","ToPort": "5432"}
+            ],
+            "VpcId": { "Fn::FindInMap": ["CustomVariables", "VpcID", "Value"]},
+              "Tags": [
+                  {"Key": "Environment", "Value": { "Fn::FindInMap": ["CustomVariables", "EnvName", "Value"]}},
+                  {"Key": "Role", "Value": "security-groups"},
+                  {"Key": "Name", "Value":  { "Fn::Join": ["",[{ "Fn::FindInMap": ["CustomVariables", "EnvName", "Value"]},"-","postgres-sg"]]}}
+              ]
+          }
+       }
+
+    },
+    "Outputs": {
+        "ManagedServerRules": {
+                "Description":"Managed Server Rules (Common) security Group",
+	  	    	"Value": { "Ref": "ManagedServerRules"},
+                "Export": { "Name": { "Fn::Join": ["",[{ "Fn::FindInMap": ["CustomVariables", "EnvName", "Value"]},"-","ManagedServerRules"]]}}
+        },
+        "postgressg": {
+                "Description":"postgres security Group",
+	  	    	"Value": { "Ref": "postgressg"},
+                "Export": { "Name": { "Fn::Join": ["",[{ "Fn::FindInMap": ["CustomVariables", "EnvName", "Value"]},"-","postgressg"]]}}
+        }       
+    }
+}

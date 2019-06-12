@@ -1,0 +1,82 @@
+{
+    "AWSTemplateFormatVersion": "2010-09-09",
+    "Description": "Security Groups",
+    "Metadata": {
+        "About": {
+            "Author": {"value": "DevOps Engineering Team"},
+            "CreatedDate": {"Value": "July 31, 2018"},
+            "Contact": {"Value": "cwdsdevopsengineering@osi.ca.gov"},
+            "UpdatedDate": {"Value": "January 30, 2019"}
+        }
+    },
+    "Mappings": {
+        "CustomVariables": {
+			"EnvName":{"Value":"utility"},
+            "VPC":{"Value":"vpc-ed303189"},
+            "PrivateSubnet":{"Value":"subnet-167cd171"},
+			"NessusInstanceType" : {"Value":"m4.xlarge"},
+            "NessusImageID" : {"Value":"ami-ea3cda89"}
+        }
+    },
+    "Resources" :
+    {
+        "NessusScannerSg": {
+            "Type": "AWS::EC2::SecurityGroup",
+            "Properties": {
+                "GroupDescription": "Nessus preauthorized server Security Group",
+                "VpcId": { "Fn::FindInMap" : ["CustomVariables","VPC","Value"] },
+                "Tags": [
+                  {"Key": "Environment", "Value": {"Fn::FindInMap": ["CustomVariables","EnvName","Value"]}},
+                  {"Key": "Role", "Value": "security-groups"},
+                  {"Key": "Name", "Value":  { "Fn::Join": ["",[{"Fn::FindInMap": ["CustomVariables", "EnvName", "Value"]},"-","nessus-sg"]]}}
+                ]
+            }
+        },
+
+        "NesusScanner": {
+            "Type": "AWS::EC2::Instance",
+            "Metadata":{ "Comment": "Nessus pre-authorized servers on AvailabilityZone west-1a" },
+            "Properties":{
+                "ImageId": { "Fn::FindInMap": ["CustomVariables","NessusImageID","Value"] },
+                "BlockDeviceMappings": [
+                    {
+                        "DeviceName": "/dev/xvda",
+                        "Ebs": {
+                            "DeleteOnTermination": "true",
+                            "VolumeSize": "8"
+                        }
+                    },
+                    {
+                        "DeviceName" : "/dev/sdb",
+                        "Ebs" : {
+                            "DeleteOnTermination" : "false",
+                            "VolumeSize" : "40"
+                        }
+                    }
+                ],
+                "InstanceType": {"Fn::FindInMap": ["CustomVariables","NessusInstanceType","Value"]},
+                "SubnetId": { "Fn::FindInMap" : ["CustomVariables","PrivateSubnet","Value"] },
+                "IamInstanceProfile": "TenableIO",
+                "Monitoring": "true",
+                "EbsOptimized": "true",
+                "InstanceInitiatedShutdownBehavior": "stop",
+                "DisableApiTermination": "false",
+                "SecurityGroupIds": [{"Ref": "NessusScannerSg"}],
+                "UserData":  { "Fn::Base64" : { "Fn::Join" : ["", [
+                  "{",
+                  "\"name\": \"",{"Fn::FindInMap": ["CustomVariables","EnvName","Value"]},"\",",
+                  "\"key\": \"3fb63bc11c748c69d22c447791760a290d6db75d628949dfbb01da9005769c10\"",",",
+                  "\"iam_role\": \"TenableIO\"",
+                  "}"
+        ]]}},
+                "Tags": [
+                    {"Key": "Environment", "Value": {"Fn::FindInMap": ["CustomVariables","EnvName","Value"]}},
+                    {"Key": "Name", "Value":  { "Fn::Join": ["",["nessus","-",{"Fn::FindInMap": ["CustomVariables","EnvName","Value"]}]]}}
+                ]
+            }
+        }
+      
+    }
+
+    
+}
