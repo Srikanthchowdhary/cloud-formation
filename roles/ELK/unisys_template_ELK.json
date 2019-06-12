@@ -1,0 +1,659 @@
+{
+	"AWSTemplateFormatVersion": "2017-09-09",
+	"Description": "Unisys ELK MGMT Stack",
+	"Metadata": {
+		"About": {
+			"Author": {
+				"value": "DevOps Engineering Team"
+			},
+			"CreatedDate": {
+				"Value": "August 11, 2017"
+			},
+			"Contact": {
+				"Value": "cwdsdevopsengineering@osi.ca.gov"
+			},
+			"UpdatedDate": {
+				"Value": "August 11, 2017"
+			}
+		}
+	},
+	"Mappings": {
+		"CustomParameters":{
+			"EnvName":{"Value":"Management"},
+			"ELKInstancetype" : {"Value":"m4.xlarge"},
+			"CertificateId" : {"Value":"arn:aws:acm:us-west-1:XXXXXXXXXXXXXX:certificate/22a49d74-2fd8-4c69-8908-228eaf79466b"},
+			"LogStashInstancetype" : {"Value":"t2.medium"},
+			"RunDeckInstancetype" : {"Value":"t2.medium"},
+			"ELKKeyName" : {"Value":"cwds_cuXXXX_keypair"},
+			"ELKSubNetid-1":{"Value":"subnet-edXXXX89"},
+			"ELKSubNetid-2":{"Value":"subnet-b8XXXXe0"},
+			"ELKSubNetid-3":{"Value":"subnet-edXXXX89"},
+			"AmazonLinux": {"Value":"ami-327XXX52"},
+			"ELKVolumeSize": {"Value":"1024"},
+			"ELKVolumeType": {"Value":"gp2"},
+			"HostedZoneName": {"Value": "cwds.io"}
+		}
+	},
+	"Parameters" : {
+    "VPC" : {
+      "Type" : "String",
+      "Default" : "vpc-c09553a4"
+    }	
+	},
+	"Resources": {
+		"RunDeckSecurityGroup": {
+			"Type": "AWS::EC2::SecurityGroup",
+			"Properties": {
+				"GroupDescription": { "Ref": "AWS::StackName" },
+				"VpcId" : { "Ref" : "VPC" },
+				"SecurityGroupIngress": [{
+					"IpProtocol" : "tcp",
+					"FromPort": "22",
+					"ToPort" : "22",
+					"CidrIp" : "10.210.2.217/32"
+				},{
+					"IpProtocol" : "tcp",
+					"FromPort": "22",
+					"ToPort" : "22",
+					"CidrIp" : "10.210.0.0/16"
+				},{
+					"IpProtocol" : "tcp",
+					"FromPort": "4440",
+					"ToPort" : "4440",
+					"CidrIp" : "10.210.2.217/32"
+				},{
+					"IpProtocol" : "tcp",
+					"FromPort": "4440",
+					"ToPort" : "4440",
+					"CidrIp" : "10.210.0.0/16"
+				}],
+				"Tags": [
+					{ "Key": "Name", "Value": "Kibana-ELK-SG"},
+					{ "Key": "Environment", "Value": {"Fn::FindInMap": ["CustomParameters", "EnvName","Value"]}}
+				]
+			}
+		},
+		"KibanaELKSecurityGroup": {
+			"Type": "AWS::EC2::SecurityGroup",
+			"Properties": {
+				"GroupDescription": { "Ref": "AWS::StackName" },
+				"VpcId" : { "Ref" : "VPC" },
+				"SecurityGroupIngress": [{
+				"IpProtocol" : "tcp",
+				"FromPort": "443",
+				"ToPort" : "443",
+				"CidrIp" : "10.210.2.217/32"
+				},{
+				"IpProtocol" : "tcp",
+				"FromPort": "443",
+				"ToPort" : "443",
+				"CidrIp" : "10.210.0.0/16"
+				}],
+				"Tags": [
+					{ "Key": "Name", "Value": "Kibana-ELK-SG"},
+					{ "Key": "Environment", "Value": {"Fn::FindInMap": ["CustomParameters", "EnvName","Value"]}}
+				]
+			}
+		},
+		"ELKSecurityGroup": {
+			"Type": "AWS::EC2::SecurityGroup",
+			"Properties": {
+				"GroupDescription": { "Ref": "AWS::StackName" },
+				"VpcId" : { "Ref" : "VPC" },
+				"SecurityGroupIngress": [{
+				"IpProtocol" : "tcp",
+				"FromPort": "22",
+				"ToPort" : "22",
+				"CidrIp" : "10.210.2.217/32"
+				},{
+				"IpProtocol" : "tcp",
+				"FromPort": "5106",
+				"ToPort" : "5106",
+				"CidrIp" : "10.210.0.0/16"
+				},{
+				"IpProtocol" : "tcp",
+				"FromPort": "9200",
+				"ToPort" : "9200",
+				"CidrIp" : "10.210.0.0/16"
+				},{
+				"IpProtocol" : "tcp",
+				"FromPort": "9300",
+				"ToPort" : "9300",
+				"CidrIp" : "10.210.0.0/16"
+				}],
+				"Tags": [
+					{ "Key": "Name", "Value": "ELK-SG"},
+					{ "Key": "Environment", "Value": {"Fn::FindInMap": ["CustomParameters", "EnvName","Value"]}}
+				]
+			}
+		},
+		"LogStashSecurityGroup": {
+			"Type": "AWS::EC2::SecurityGroup",
+			"Properties": {
+				"GroupDescription": { "Ref": "AWS::StackName" },
+				"VpcId" : { "Ref" : "VPC" },
+				"SecurityGroupIngress": [{
+				"IpProtocol" : "tcp",
+				"FromPort": "22",
+				"ToPort" : "22",
+				"CidrIp" : "xx.xxx.x.217/32"
+				},{
+				"IpProtocol" : "tcp",
+				"FromPort": "5xx0",
+				"ToPort" : "51xx",
+				"CidrIp" : "10.0.0.0/8"
+				},{
+				"IpProtocol" : "udp",
+				"FromPort": "12202",
+				"ToPort" : "12202",
+				"CidrIp" : "10.0.0.0/8"
+				},{
+				"IpProtocol" : "tcp",
+				"FromPort": "5044",
+				"ToPort" : "5044",
+				"CidrIp" : "10.0.0.0/8"
+				}],
+				"Tags": [
+					{ "Key": "Name", "Value": "LogStash-ELK-SG"},
+					{ "Key": "Environment", "Value": {"Fn::FindInMap": ["CustomParameters", "EnvName","Value"]}}
+				]
+			}
+		},		
+		"ELKEC2Instance1": {
+			"Type": "AWS::EC2::Instance",
+			"Properties": {
+				"ImageId": {"Fn::FindInMap": ["CustomParameters", "AmazonLinux","Value"]},
+				"DisableApiTermination": "false",
+				"BlockDeviceMappings": [
+                    {
+                        "DeviceName": "/dev/xvda",
+                        "Ebs": {
+                            "DeleteOnTermination": "true",
+                            "VolumeSize": "32"
+                        }
+                    }
+                ],
+				"InstanceType": {"Fn::FindInMap": ["CustomParameters", "ELKInstancetype","Value"]},
+				"KeyName": {"Fn::FindInMap": ["CustomParameters", "ELKKeyName","Value"]},
+				"SubnetId": {"Fn::FindInMap": ["CustomParameters", "ELKSubNetid-1","Value"]},
+				"SecurityGroupIds": [{ "Ref": "ELKSecurityGroup" }],
+				"UserData" : { "Fn::Base64" : { "Fn::Join" : ["", [
+				"#!/bin/bash -xe\n",
+				"# create mount point directory\n",
+				"if ! [ -f /etc/cron.daily/resizefs ]\n then\n ",
+				"echo \"resize2fs /dev/xvdh\" >> /etc/cron.daily/resizefs\nfi\n",
+				"mkdir /var/lib/elasticsearch\n",
+				"# create ext4 filesystem on new volume\n",
+				"mkfs -t ext4 /dev/xvdh\n",
+				"# add an entry to fstab to mount volume during boot\n",
+				"echo \"/dev/xvdh       /var/lib/elasticsearch   ext4    defaults,nofail 0       2\" >> /etc/fstab\n",
+				"# mount the volume on current boot\n",
+				"mount -a\n"
+				]]}},
+				"Tags": [
+					{ "Key": "Name", "Value":  { "Fn::Join": ["",["ELK-Instance1","-",{"Fn::FindInMap": ["CustomParameters", "EnvName","Value"]}]]}},
+					{ "Key": "Environment", "Value": {"Fn::FindInMap": ["CustomParameters", "EnvName","Value"]}}
+				]
+			}
+		},
+		"ELKInstance1Volume": {
+			"Type" : "AWS::EC2::Volume",
+			"Properties" : {
+				"Size" : {"Fn::FindInMap": ["CustomParameters", "ELKVolumeSize","Value"]},
+				"VolumeType": {"Fn::FindInMap": ["CustomParameters", "ELKVolumeType","Value"]},
+				"AvailabilityZone" : { "Fn::GetAtt" : [ "ELKEC2Instance1", "AvailabilityZone" ] }
+			}
+		},
+		"ELKInstance1Attachment" : {
+			"Type" : "AWS::EC2::VolumeAttachment",
+			"Properties" : {
+				"InstanceId" : { "Ref" : "ELKEC2Instance1" },
+				"VolumeId"  : { "Ref" : "ELKInstance1Volume" },
+				"Device" : "/dev/xvdh"
+			}
+		},
+		"ELKEC2Instance2": {
+			"Type": "AWS::EC2::Instance",
+			"Properties": {
+				"ImageId": {"Fn::FindInMap": ["CustomParameters", "AmazonLinux","Value"]},
+				"DisableApiTermination": "false",
+				"BlockDeviceMappings": [
+                    {
+                        "DeviceName": "/dev/xvda",
+                        "Ebs": {
+                            "DeleteOnTermination": "true",
+                            "VolumeSize": "32"
+                        }
+                    }
+                ],
+				"InstanceType": {"Fn::FindInMap": ["CustomParameters", "ELKInstancetype","Value"]},
+				"KeyName": {"Fn::FindInMap": ["CustomParameters", "ELKKeyName","Value"]},
+				"SubnetId": {"Fn::FindInMap": ["CustomParameters", "ELKSubNetid-2","Value"]},
+				"SecurityGroupIds": [{ "Ref": "ELKSecurityGroup" }],
+				"UserData" : { "Fn::Base64" : { "Fn::Join" : ["", [
+				"#!/bin/bash -xe\n",
+				"# create mount point directory\n",
+				"if [ -d /var/lib/elasticsearch ]\n then\n ",
+				"echo \"resize2fs /dev/xvdh\" >> /etc/cron.daily/resizefs\nelse\n",
+				"mkdir /var/lib/elasticsearch\n",
+				"# create ext4 filesystem on new volume\n",
+				"mkfs -t ext4 /dev/xvdh\n",
+				"# add an entry to fstab to mount volume during boot\n",
+				"echo \"/dev/xvdh       /var/lib/elasticsearch   ext4    defaults,nofail 0       2\" >> /etc/fstab\n",
+				"# mount the volume on current boot\n",
+				"mount -a\nfi\n"
+				]]}},
+				"Tags": [
+					{ "Key": "Name", "Value":  { "Fn::Join": ["",["ELK-Instance2","-",{"Fn::FindInMap": ["CustomParameters", "EnvName","Value"]}]]}},
+					{ "Key": "Environment", "Value": {"Fn::FindInMap": ["CustomParameters", "EnvName","Value"]}}
+				]
+			}
+		},
+		"ELKInstance2Volume": {
+			"Type" : "AWS::EC2::Volume",
+			"Properties" : {
+				"Size" : {"Fn::FindInMap": ["CustomParameters", "ELKVolumeSize","Value"]},
+				"VolumeType": {"Fn::FindInMap": ["CustomParameters", "ELKVolumeType","Value"]},
+				"AvailabilityZone" : { "Fn::GetAtt" : [ "ELKEC2Instance2", "AvailabilityZone" ] }
+			}
+		},
+		"ELKInstance2Attachment" : {
+			"Type" : "AWS::EC2::VolumeAttachment",
+			"Properties" : {
+				"InstanceId" : { "Ref" : "ELKEC2Instance2" },
+				"VolumeId"  : { "Ref" : "ELKInstance2Volume" },
+				"Device" : "/dev/xvdh"
+			}
+		},
+		"ELKEC2Instance3": {
+			"Type": "AWS::EC2::Instance",
+			"Properties": {
+				"ImageId": {"Fn::FindInMap": ["CustomParameters", "AmazonLinux","Value"]},
+				"DisableApiTermination": "false",
+				"BlockDeviceMappings": [
+                    {
+                        "DeviceName": "/dev/xvda",
+                        "Ebs": {
+                            "DeleteOnTermination": "true",
+                            "VolumeSize": "32"
+                        }
+                    }
+                ],
+				"InstanceType": {"Fn::FindInMap": ["CustomParameters", "ELKInstancetype","Value"]},
+				"KeyName": {"Fn::FindInMap": ["CustomParameters", "ELKKeyName","Value"]},
+				"SubnetId": {"Fn::FindInMap": ["CustomParameters", "ELKSubNetid-3","Value"]},
+				"SecurityGroupIds": [{ "Ref": "ELKSecurityGroup" }],
+				"UserData" : { "Fn::Base64" : { "Fn::Join" : ["", [
+				"#!/bin/bash -xe\n",
+				"# create mount point directory\n",
+				"if [ -d /var/lib/elasticsearch ]\n then\n ",
+				"echo \"resize2fs /dev/xvdh\" >> /etc/cron.daily/resizefs\nelse\n",
+				"mkdir /var/lib/elasticsearch\n",
+				"# create ext4 filesystem on new volume\n",
+				"mkfs -t ext4 /dev/xvdh\n",
+				"# add an entry to fstab to mount volume during boot\n",
+				"echo \"/dev/xvdh       /var/lib/elasticsearch   ext4    defaults,nofail 0       2\" >> /etc/fstab\n",
+				"# mount the volume on current boot\n",
+				"mount -a\nfi\n"
+				]]}},
+				"Tags": [
+					{ "Key": "Name", "Value":  { "Fn::Join": ["",["ELK-Instance3","-",{"Fn::FindInMap": ["CustomParameters", "EnvName","Value"]}]]}},
+					{ "Key": "Environment", "Value": {"Fn::FindInMap": ["CustomParameters", "EnvName","Value"]}}
+				]
+			}
+		},
+		"ELKInstance3Volume": {
+			"Type" : "AWS::EC2::Volume",
+			"Properties" : {
+				"Size" : {"Fn::FindInMap": ["CustomParameters", "ELKVolumeSize","Value"]},
+				"VolumeType": {"Fn::FindInMap": ["CustomParameters", "ELKVolumeType","Value"]},
+				"AvailabilityZone" : { "Fn::GetAtt" : [ "ELKEC2Instance3", "AvailabilityZone" ] }
+			}
+		},
+		"ELKInstance3Attachment" : {
+			"Type" : "AWS::EC2::VolumeAttachment",
+			"Properties" : {
+				"InstanceId" : { "Ref" : "ELKEC2Instance3" },
+				"VolumeId"  : { "Ref" : "ELKInstance3Volume" },
+				"Device" : "/dev/xvdh"
+			}
+		},
+		"ELKEC2Instance1Route53": {
+			"Type": "AWS::Route53::RecordSet",
+			"Properties": {
+                "Name": { "Fn::Join": ["",["elk-inst-1",".",{"Fn::FindInMap": ["CustomParameters", "HostedZoneName","Value"]}]]}, 
+                "Type": "A",
+                "Comment": "ELK EC2 Instance 1",
+                "HostedZoneName": { "Fn::Join": ["",[{"Fn::FindInMap": ["CustomParameters", "HostedZoneName","Value"]},"."]]},
+                "ResourceRecords": [ {"Fn::GetAtt": ["ELKEC2Instance1", "PrivateIp"]} ],
+                "TTL": "360"
+            }
+		},
+		"ELKEC2Instance2Route53": {
+			"Type": "AWS::Route53::RecordSet",
+			"Properties": {
+                "Name": { "Fn::Join": ["",["elk-inst-2",".",{"Fn::FindInMap": ["CustomParameters", "HostedZoneName","Value"]}]]}, 
+                "Type": "A",
+                "Comment": "ELK EC2 Instance 2",
+                "HostedZoneName": { "Fn::Join": ["",[{"Fn::FindInMap": ["CustomParameters", "HostedZoneName","Value"]},"."]]},
+                "ResourceRecords": [ {"Fn::GetAtt": ["ELKEC2Instance2", "PrivateIp"]} ],
+                "TTL": "360"
+            }
+		},
+		"ELKEC2Instance3Route53": {
+			"Type": "AWS::Route53::RecordSet",
+			"Properties": {
+                "Name": { "Fn::Join": ["",["elk-inst-3",".",{"Fn::FindInMap": ["CustomParameters", "HostedZoneName","Value"]}]]}, 
+                "Type": "A",
+                "Comment": "ELK EC2 Instance 3",
+                "HostedZoneName": { "Fn::Join": ["",[{"Fn::FindInMap": ["CustomParameters", "HostedZoneName","Value"]},"."]]},
+                "ResourceRecords": [ {"Fn::GetAtt": ["ELKEC2Instance3", "PrivateIp"]} ],
+                "TTL": "360"
+            }
+        },
+		"LogStashInstance1Route53": {
+			"Type": "AWS::Route53::RecordSet",
+			"Properties": {
+                "Name": { "Fn::Join": ["",["LogStash-inst-1",".",{"Fn::FindInMap": ["CustomParameters", "HostedZoneName","Value"]}]]}, 
+                "Type": "A",
+                "Comment": "LogStash EC2 Instance 1",
+                "HostedZoneName": { "Fn::Join": ["",[{"Fn::FindInMap": ["CustomParameters", "HostedZoneName","Value"]},"."]]},
+                "ResourceRecords": [ {"Fn::GetAtt": ["LogStashInstance1", "PrivateIp"]} ],
+                "TTL": "360"
+            }
+		},
+		"LogStashInstance2Route53": {
+			"Type": "AWS::Route53::RecordSet",
+			"Properties": {
+                "Name": { "Fn::Join": ["",["LogStash-inst-2",".",{"Fn::FindInMap": ["CustomParameters", "HostedZoneName","Value"]}]]}, 
+                "Type": "A",
+                "Comment": "LogStash EC2 Instance 2",
+                "HostedZoneName": { "Fn::Join": ["",[{"Fn::FindInMap": ["CustomParameters", "HostedZoneName","Value"]},"."]]},
+                "ResourceRecords": [ {"Fn::GetAtt": ["LogStashInstance2", "PrivateIp"]} ],
+                "TTL": "360"
+            }
+		},
+		"RundeckInstance1Route53": {
+			"Type": "AWS::Route53::RecordSet",
+			"Properties": {
+				"Name": { "Fn::Join": ["",["rundeck",".",{"Fn::FindInMap": ["CustomParameters", "HostedZoneName","Value"]}]]},
+				"Type": "A",
+				"Comment": "RundeckInstance1 EC2",
+				"HostedZoneName": { "Fn::Join": ["",[{"Fn::FindInMap": ["CustomParameters", "HostedZoneName","Value"]},"."]]},
+				"ResourceRecords": [ {"Fn::GetAtt": ["RundeckInstance1", "PrivateIp"]} ],
+				"TTL": "360"
+			}
+		},
+		"RundeckInstance1": {
+			"Type": "AWS::EC2::Instance",
+			"Properties": {
+				"ImageId": {"Fn::FindInMap": ["CustomParameters", "AmazonLinux","Value"]},
+				"DisableApiTermination": "false",
+				"BlockDeviceMappings": [
+					{
+						"DeviceName": "/dev/xvda",
+						"Ebs": {
+							"DeleteOnTermination": "true",
+							"VolumeSize": "32"
+						}
+					}
+				],
+				"InstanceType": {"Fn::FindInMap": ["CustomParameters", "RunDeckInstancetype","Value"]},
+				"KeyName": {"Fn::FindInMap": ["CustomParameters", "ELKKeyName","Value"]},
+				"SubnetId": {"Fn::FindInMap": ["CustomParameters", "ELKSubNetid-1","Value"]},
+				"SecurityGroupIds": [{ "Ref": "RunDeckSecurityGroup" }],
+				"Tags": [
+					{ "Key": "Name", "Value":  { "Fn::Join": ["",["ELK-RunDeck-Instance1","-",{"Fn::FindInMap": ["CustomParameters", "EnvName","Value"]}]]}},
+					{ "Key": "Environment", "Value": {"Fn::FindInMap": ["CustomParameters", "EnvName","Value"]}}
+				]
+			}
+		},
+		"LogStashInstance1": {
+			"Type": "AWS::EC2::Instance",
+			"Properties": {
+				"ImageId": {"Fn::FindInMap": ["CustomParameters", "AmazonLinux","Value"]},
+				"DisableApiTermination": "false",
+				"BlockDeviceMappings": [
+                    {
+                        "DeviceName": "/dev/xvda",
+                        "Ebs": {
+                            "DeleteOnTermination": "true",
+                            "VolumeSize": "32"
+                        }
+                    }
+                ],
+				"InstanceType": {"Fn::FindInMap": ["CustomParameters", "LogStashInstancetype","Value"]},
+				"KeyName": {"Fn::FindInMap": ["CustomParameters", "ELKKeyName","Value"]},
+				"SubnetId": {"Fn::FindInMap": ["CustomParameters", "ELKSubNetid-1","Value"]},
+				"SecurityGroupIds": [{ "Ref": "LogStashSecurityGroup" }],
+				"Tags": [
+					{ "Key": "Name", "Value":  { "Fn::Join": ["",["ELK-LogStash-Instance1","-",{"Fn::FindInMap": ["CustomParameters", "EnvName","Value"]}]]}},
+					{ "Key": "Environment", "Value": {"Fn::FindInMap": ["CustomParameters", "EnvName","Value"]}}
+				]
+			}
+        },
+		"LogStashInstance2": {
+			"Type": "AWS::EC2::Instance",
+			"Properties": {
+				"ImageId": {"Fn::FindInMap": ["CustomParameters", "AmazonLinux","Value"]},
+				"DisableApiTermination": "false",
+				"BlockDeviceMappings": [
+                    {
+                        "DeviceName": "/dev/xvda",
+                        "Ebs": {
+                            "DeleteOnTermination": "true",
+                            "VolumeSize": "32"
+                        }
+                    }
+                ],
+				"InstanceType": {"Fn::FindInMap": ["CustomParameters", "LogStashInstancetype","Value"]},
+				"KeyName": {"Fn::FindInMap": ["CustomParameters", "ELKKeyName","Value"]},
+				"SubnetId": {"Fn::FindInMap": ["CustomParameters", "ELKSubNetid-2","Value"]},
+				"SecurityGroupIds": [{ "Ref": "LogStashSecurityGroup" }],
+				"Tags": [
+					{ "Key": "Name", "Value":  { "Fn::Join": ["",["ELK-LogStash-Instance2","-",{"Fn::FindInMap": ["CustomParameters", "EnvName","Value"]}]]}},
+					{ "Key": "Environment", "Value": {"Fn::FindInMap": ["CustomParameters", "EnvName","Value"]}}
+				]
+			}			
+		},
+		"KibanaELKRoute53": {
+			"Type": "AWS::Route53::RecordSet",
+			"Properties": {
+                "Name": { "Fn::Join": ["",["logs",".",{"Fn::FindInMap": ["CustomParameters", "HostedZoneName","Value"]}]]}, 
+                "Type": "A",
+                "HostedZoneName": { "Fn::Join": ["",[{"Fn::FindInMap": ["CustomParameters", "HostedZoneName","Value"]},"."]]},
+				"AliasTarget" : {
+                  "HostedZoneId" : { "Fn::GetAtt" : ["KibanaELB", "CanonicalHostedZoneNameID"] },
+                  "DNSName" : { "Fn::GetAtt" : ["KibanaELB","DNSName"] }
+				}
+            }
+		},	
+		"ElasticELBRoute53": {
+			"Type": "AWS::Route53::RecordSet",
+			"Properties": {
+                "Name": { "Fn::Join": ["",["elastic",".",{"Fn::FindInMap": ["CustomParameters", "HostedZoneName","Value"]}]]}, 
+                "Type": "A",
+                "HostedZoneName": { "Fn::Join": ["",[{"Fn::FindInMap": ["CustomParameters", "HostedZoneName","Value"]},"."]]},
+				"AliasTarget" : {
+                  "HostedZoneId" : { "Fn::GetAtt" : ["ElasticELB", "CanonicalHostedZoneNameID"] },
+                  "DNSName" : { "Fn::GetAtt" : ["ElasticELB","DNSName"] }
+				}
+            }
+		},
+		"LogStashELBRoute53": {
+			"Type": "AWS::Route53::RecordSet",
+			"Properties": {
+                "Name": { "Fn::Join": ["",["logstash",".",{"Fn::FindInMap": ["CustomParameters", "HostedZoneName","Value"]}]]}, 
+                "Type": "A",
+                "HostedZoneName": { "Fn::Join": ["",[{"Fn::FindInMap": ["CustomParameters", "HostedZoneName","Value"]},"."]]},
+				"AliasTarget" : {
+                  "HostedZoneId" : { "Fn::GetAtt" : ["LogStashELB", "CanonicalHostedZoneNameID"] },
+                  "DNSName" : { "Fn::GetAtt" : ["LogStashELB","DNSName"] }
+				}
+            }
+		},		
+		"LogStashELB": {
+           "Type": "AWS::ElasticLoadBalancing::LoadBalancer",
+           "Properties": {
+              "LoadBalancerName": { "Fn::Join": ["",["LogStash-ELB","-",{"Fn::FindInMap": ["CustomParameters", "EnvName","Value"]}]]},
+			  "LBCookieStickinessPolicy": [{
+				"PolicyName": "ELBMaxSession",
+				"CookieExpirationPeriod": 3600
+			  }],
+              "Listeners" : [
+                  {
+                      "LoadBalancerPort": "5000",
+                      "InstancePort": "5000",
+                      "Protocol": "TCP",
+                      "InstanceProtocol": "TCP"
+                  },                  
+				  {
+                      "LoadBalancerPort": "5044",
+                      "InstancePort": "5044",
+                      "Protocol": "TCP",
+                      "InstanceProtocol": "TCP"
+                  }
+              ],
+              "Scheme" : "internal",
+              "SecurityGroups" : [ {"Ref": "LogStashSecurityGroup"}],
+              "Subnets" : [
+                {"Fn::FindInMap": ["CustomParameters", "ELKSubNetid-2","Value"]},
+				{"Fn::FindInMap": ["CustomParameters", "ELKSubNetid-1","Value"]}
+              ],
+              "HealthCheck": {
+                  "Target": "TCP:5044",
+                  "HealthyThreshold": "3",
+                  "UnhealthyThreshold": "5",
+                  "Interval": 90,
+                  "Timeout": "10"
+              },
+              "Instances": [
+                  {"Ref": "LogStashInstance1"},
+                  {"Ref": "LogStashInstance2"}
+              ],
+             "Tags": [
+				{ "Key": "Name", "Value":  { "Fn::Join": ["",["LogStash-ELB","-",{"Fn::FindInMap": ["CustomParameters", "EnvName","Value"]}]]}},
+                {"Key": "Application", "Value": {"Ref": "AWS::StackName"}},
+				{ "Key": "Environment", "Value": {"Fn::FindInMap": ["CustomParameters", "EnvName","Value"]}}
+              ]
+           }
+        },
+        "KibanaELB": {
+           "Type": "AWS::ElasticLoadBalancing::LoadBalancer",
+           "Properties": {
+              "LoadBalancerName": { "Fn::Join": ["",["Kibana-ELB","-",{"Fn::FindInMap": ["CustomParameters", "EnvName","Value"]}]]},
+			  "LBCookieStickinessPolicy": [{
+				"PolicyName": "ELBMaxSession",
+				"CookieExpirationPeriod": 3600
+			  }],
+              "Listeners" : [
+                  {
+                      "LoadBalancerPort": "443",
+                      "SSLCertificateId": {"Fn::FindInMap": ["CustomParameters", "CertificateId","Value"]},
+                      "InstancePort": "5106",
+                      "Protocol": "HTTPS",
+                      "InstanceProtocol": "HTTP",
+					  "PolicyNames" : [ "ELBMaxSession" ]
+                  }
+              ],
+              "Scheme" : "internal",
+              "SecurityGroups" : [ {"Ref": "KibanaELKSecurityGroup"}],
+              "Subnets" : [
+                {"Fn::FindInMap": ["CustomParameters", "ELKSubNetid-2","Value"]},
+                {"Fn::FindInMap": ["CustomParameters", "ELKSubNetid-3","Value"]},
+				{"Fn::FindInMap": ["CustomParameters", "ELKSubNetid-1","Value"]}
+              ],
+              "HealthCheck": {
+                  "Target": "TCP:5106",
+                  "HealthyThreshold": "3",
+                  "UnhealthyThreshold": "5",
+                  "Interval": 90,
+                  "Timeout": "10"
+              },
+              "Instances": [
+                  {"Ref": "ELKEC2Instance2"},
+                  {"Ref": "ELKEC2Instance3"},
+                  {"Ref": "ELKEC2Instance1"}
+              ],
+             "Tags": [
+				{ "Key": "Name", "Value":  { "Fn::Join": ["",["Kibana-ELB","-",{"Fn::FindInMap": ["CustomParameters", "EnvName","Value"]}]]}},
+                {"Key": "Application", "Value": {"Ref": "AWS::StackName"}},
+				{ "Key": "Environment", "Value": {"Fn::FindInMap": ["CustomParameters", "EnvName","Value"]}}
+              ]
+           }
+        },	
+        "ElasticELB": {
+           "Type": "AWS::ElasticLoadBalancing::LoadBalancer",
+           "Properties": {
+              "LoadBalancerName": { "Fn::Join": ["",["Elastic-ELB","-",{"Fn::FindInMap": ["CustomParameters", "EnvName","Value"]}]]},
+			  "LBCookieStickinessPolicy": [{
+				"PolicyName": "ELBMaxSession",
+				"CookieExpirationPeriod": 3600
+			  }],
+              "Listeners" : [
+                  {
+                      "LoadBalancerPort": "9200",
+                      "SSLCertificateId": {"Fn::FindInMap": ["CustomParameters", "CertificateId","Value"]},
+                      "InstancePort": "9200",
+                      "Protocol": "HTTP",
+                      "InstanceProtocol": "HTTP",
+					  "PolicyNames" : [ "ELBMaxSession" ]
+                  }
+              ],
+              "Scheme" : "internal",
+              "SecurityGroups" : [ {"Ref": "ELKSecurityGroup"}],
+              "Subnets" : [
+                {"Fn::FindInMap": ["CustomParameters", "ELKSubNetid-2","Value"]},
+                {"Fn::FindInMap": ["CustomParameters", "ELKSubNetid-3","Value"]},
+				{"Fn::FindInMap": ["CustomParameters", "ELKSubNetid-1","Value"]}
+              ],
+              "HealthCheck": {
+                  "Target": "TCP:9200",
+                  "HealthyThreshold": "3",
+                  "UnhealthyThreshold": "5",
+                  "Interval": 90,
+                  "Timeout": "10"
+              },
+              "Instances": [
+                  {"Ref": "ELKEC2Instance2"},
+                  {"Ref": "ELKEC2Instance3"},
+                  {"Ref": "ELKEC2Instance1"}
+              ],
+             "Tags": [
+				{ "Key": "Name", "Value":  { "Fn::Join": ["",["Elastic-ELB","-",{"Fn::FindInMap": ["CustomParameters", "EnvName","Value"]}]]}},
+                {"Key": "Application", "Value": {"Ref": "AWS::StackName"}},
+				{ "Key": "Environment", "Value": {"Fn::FindInMap": ["CustomParameters", "EnvName","Value"]}}
+              ]
+           }
+        }
+		},
+	"Outputs": {
+        "LogStashInstance1": {
+			"Description": "LogStash Server Private IP",
+			"Value": {"Fn::GetAtt": ["LogStashInstance1","PrivateIp"]},
+			"Export": { "Name": { "Fn::Join": ["",["LogStash-Instance1","-",{"Fn::FindInMap": ["CustomParameters", "EnvName","Value"]}]]}}
+		},
+        "LogStashInstance2": {
+			"Description": "LogStash Server Private IP",
+			"Value": {"Fn::GetAtt": ["LogStashInstance2","PrivateIp"]},
+			"Export": { "Name": { "Fn::Join": ["",["LogStash-Instance2","-",{"Fn::FindInMap": ["CustomParameters", "EnvName","Value"]}]]}}
+		},
+        "ELKEC2Instance1": {
+			"Description": "ELK Server Private IP",
+			"Value": {"Fn::GetAtt": ["ELKEC2Instance1","PrivateIp"]},
+			"Export": { "Name": { "Fn::Join": ["",["ELK-Instance1","-",{"Fn::FindInMap": ["CustomParameters", "EnvName","Value"]}]]}}
+		},
+        "ELKEC2Instance2": {
+			"Description": "ELK Server Private IP",
+			"Value": {"Fn::GetAtt": ["ELKEC2Instance2","PrivateIp"]},
+			"Export": { "Name": { "Fn::Join": ["",["ELK-Instance2","-",{"Fn::FindInMap": ["CustomParameters", "EnvName","Value"]}]]}}
+		},
+        "ELKEC2Instance3": {
+			"Description": "ELK Server Private IP",
+			"Value": {"Fn::GetAtt": ["ELKEC2Instance3","PrivateIp"]},
+			"Export": { "Name": { "Fn::Join": ["",["ELK-Instance3","-",{"Fn::FindInMap": ["CustomParameters", "EnvName","Value"]}]]}}
+		}
+		
+		
+	}
+}

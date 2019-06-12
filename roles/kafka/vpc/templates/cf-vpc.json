@@ -1,0 +1,193 @@
+{
+    "AWSTemplateFormatVersion": "2010-09-09",
+    "Description": "This templates creates/updates vpc and routes",
+    "Metadata": {
+        "About": {
+            "Author": {"value": "DevOps Engineering Team"},
+            "CreatedDate": {"Value": "May 20, 2019"},
+            "Contact": {"Value": "cwdsdevopsengineering@osi.ca.gov"},
+            "UpdatedDate": {"Value": "{{ansible_date_time.date}}"}
+        }
+    },
+    "Mappings": {
+        "CustomVariables": { 
+        "Environment": { "Value" : "{{ hostvars[groups['stack'][0]]['environment_name'] }}"},
+        "VpcCidrBlock": {"Value":"{{ hostvars[groups['stack'][0]]['vpc_cidr'] }}"},
+        "AvailabilityZoneA": { "Value" : "{{ hostvars[groups['stack'][0]]['availabilityzoneA'] }}"},
+        "AvailabilityZoneB": { "Value" : "{{ hostvars[groups['stack'][0]]['availabilityzoneB'] }}"},
+        "AvailabilityZoneC": { "Value" : "{{ hostvars[groups['stack'][0]]['availabilityzoneC'] }}"},
+		"Cidr1": {"Value":"{{ hostvars[groups['stack'][0]]['cidrblock1'] }}"},
+		"Cidr2": {"Value":"{{ hostvars[groups['stack'][0]]['cidrblock2'] }}"},
+        "Cidr3": {"Value":"{{ hostvars[groups['stack'][0]]['cidrblock3'] }}"},
+        "AmazonAsn": {"Value":"{{ hostvars[groups['stack'][0]]['amazon_side_asn'] }}"},
+        "ManagementVpcId": { "Value" : "{{ hostvars[groups['stack'][0]]['management_vpc_id'] }}"},
+        "ManagementVpcCidr": { "Value" : "{{ hostvars[groups['stack'][0]]['management_vpc_cidr'] }}"},
+        "PeerRegion": { "Value" : "{{ hostvars[groups['stack'][0]]['peer_region'] }}"}
+        }
+    },
+    "Resources": {
+        "VPC": {
+            "Type": "AWS::EC2::VPC",
+            "Metadata": {"Comment": "Creates VPC"},
+            "Properties": {
+                "CidrBlock": {"Fn::FindInMap": ["CustomVariables", "VpcCidrBlock", "Value"]},
+                "Tags": [
+                    {"Key": "Environment", "Value": {"Fn::FindInMap": ["CustomVariables", "Environment", "Value"]}},
+                    {"Key": "Name", "Value": { "Fn::Join": ["",["Vpc","-",{"Fn::FindInMap": ["CustomVariables", "Environment", "Value"]}]]}}
+                ]
+            }
+        },
+        "Route1": {
+            "Type": "AWS::EC2::RouteTable",
+            "Properties": {
+                "VpcId": { "Ref": "VPC"},
+                "Tags": [
+                     {"Key": "Environment", "Value": {"Fn::FindInMap": ["CustomVariables", "Environment", "Value"]}},
+                     {"Key": "Name", "Value": { "Fn::Join": ["",["Route1","-",{"Fn::FindInMap": ["CustomVariables", "Environment", "Value"]}]]}}
+                ]
+            }
+        },
+        "Subnet1": {
+            "Type": "AWS::EC2::Subnet",
+            "Properties": {
+                "AvailabilityZone": {"Fn::FindInMap": ["CustomVariables", "AvailabilityZoneA", "Value"]},
+                "VpcId": { "Ref": "VPC"},
+                "CidrBlock": {"Fn::FindInMap": ["CustomVariables", "Cidr1", "Value"]},
+                "Tags": [
+                    {"Key": "Environment", "Value": {"Fn::FindInMap": ["CustomVariables", "Environment", "Value"]}},
+                    {"Key": "Name", "Value": { "Fn::Join": ["",["Subnet-2A-1","-",{"Fn::FindInMap": ["CustomVariables", "Environment", "Value"]}]]}}
+                 ]
+             }
+        },
+        "Subnet2": {
+            "Type": "AWS::EC2::Subnet",
+            "Properties": {
+                "AvailabilityZone": {"Fn::FindInMap": ["CustomVariables", "AvailabilityZoneB", "Value"]},
+                "VpcId": { "Ref": "VPC"},
+                "CidrBlock": {"Fn::FindInMap": ["CustomVariables", "Cidr2", "Value"]},
+                "Tags": [
+                    {"Key": "Environment", "Value": {"Fn::FindInMap": ["CustomVariables", "Environment", "Value"]}},
+                    {"Key": "Name", "Value": { "Fn::Join": ["",["Subnet-2B-1","-",{"Fn::FindInMap": ["CustomVariables", "Environment", "Value"]}]]}}
+                 ]
+             }
+        },
+        "Subnet3": {
+            "Type": "AWS::EC2::Subnet",
+            "Properties": {
+                "AvailabilityZone": {"Fn::FindInMap": ["CustomVariables", "AvailabilityZoneC", "Value"]},
+                "VpcId": { "Ref": "VPC"},
+                "CidrBlock": {"Fn::FindInMap": ["CustomVariables", "Cidr3", "Value"]},
+                "Tags": [
+                    {"Key": "Environment", "Value": {"Fn::FindInMap": ["CustomVariables", "Environment", "Value"]}},
+                    {"Key": "Name", "Value": { "Fn::Join": ["",["Subnet-2C-1","-",{"Fn::FindInMap": ["CustomVariables", "Environment", "Value"]}]]}}
+                 ]
+             }
+        },
+        "Subnet1Association": {
+            "Type": "AWS::EC2::SubnetRouteTableAssociation",
+            "Properties": {
+                "SubnetId": {"Ref": "Subnet1"},
+                "RouteTableId": { "Ref": "Route1"}
+            }
+        },
+        "Subnet2Association": {
+            "Type": "AWS::EC2::SubnetRouteTableAssociation",
+            "Properties": {
+                "SubnetId": {"Ref": "Subnet2"},
+                "RouteTableId": { "Ref": "Route1"}
+            }
+        },
+        "Subnet3Association": {
+            "Type": "AWS::EC2::SubnetRouteTableAssociation",
+            "Properties": {
+                "SubnetId": {"Ref": "Subnet3"},
+                "RouteTableId": { "Ref": "Route1"}
+            }
+        },
+        "VPNGateway" : {
+            "Type" : "AWS::EC2::VPNGateway",
+            "Properties" : {
+                "AmazonSideAsn" : {"Fn::FindInMap": ["CustomVariables", "AmazonAsn", "Value"]},
+                "Type" : "ipsec.1",
+                "Tags" : [
+                    {"Key": "Environment", "Value": {"Fn::FindInMap": ["CustomVariables", "Environment", "Value"]}},
+                    {"Key": "Name", "Value": { "Fn::Join": ["",[{"Fn::FindInMap": ["CustomVariables", "Environment", "Value"]},"-","VPNGateway"]]}}
+                ]
+           }
+        },
+        "AttachVpnGateway": {
+            "Type" : "AWS::EC2::VPCGatewayAttachment",
+            "Properties": {
+                "VpcId": { "Ref": "VPC"},
+                "VpnGatewayId" : { "Ref": "VPNGateway"}
+            }
+        },
+        "VPNGatewayRoute1A": {
+            "DependsOn": "AttachVpnGateway",
+            "Type": "AWS::EC2::Route",
+            "Properties": { 
+                "RouteTableId": { "Ref": "Route1"},
+                "DestinationCidrBlock": "0.0.0.0/0",
+                "GatewayId" : { "Ref" : "VPNGateway" }
+            }
+        },
+        "ManagementVPCPeeringConnection": {
+            "Type" : "AWS::EC2::VPCPeeringConnection",
+            "Properties" : {
+                "PeerRegion" : {"Fn::FindInMap": ["CustomVariables", "PeerRegion", "Value"]},
+                "PeerVpcId" : {"Fn::FindInMap": ["CustomVariables", "ManagementVpcId", "Value"]},
+                "VpcId" : { "Ref": "VPC"},
+                "Tags" : [
+                    {"Key": "Environment", "Value": {"Fn::FindInMap": ["CustomVariables", "Environment", "Value"]}},
+                    {"Key": "Name", "Value": { "Fn::Join": ["",[{"Fn::FindInMap": ["CustomVariables", "Environment", "Value"]},"-","{{ hostvars[groups['stack'][0]]['management_vpc_id'] }}"]]}}
+                ]
+              }
+          },
+          "VpcRoute2APeering": {
+            "Type": "AWS::EC2::Route",
+            "Metadata":{ "Comment": "Peering the New Environment Route2A with the VPC of the Proxy server" },
+            "Properties": {
+                "DestinationCidrBlock": {"Fn::FindInMap": ["CustomVariables", "ManagementVpcCidr", "Value"]},
+                "RouteTableId" :{"Ref": "Route1"},
+                "VpcPeeringConnectionId" : {"Ref": "ManagementVPCPeeringConnection"}
+            }
+        } 
+    },
+    "Outputs": {
+        "VPC": {
+            "Description": "VPC ID ",
+            "Value": {"Ref": "VPC"},
+            "Export": {"Name": { "Fn::Join": ["",[{"Fn::FindInMap": ["CustomVariables", "Environment", "Value"]},"-","VPC-ID"]]}}
+        },
+        "VpcCidr":{
+            "Description": "VPC Cidr Block ",
+            "Value": {"Fn::GetAtt": [ "VPC" ,"CidrBlock"]},
+            "Export": {"Name": { "Fn::Join": ["",[{"Fn::FindInMap": ["CustomVariables", "Environment", "Value"]},"-","CidrBlock"]]}}
+        },
+        "Route1": {
+            "Description": "Routes for the VPC Created",
+            "Value": {"Ref": "Route1"},
+            "Export": {"Name": { "Fn::Join": ["",[{"Fn::FindInMap": ["CustomVariables", "Environment", "Value"]},"-","Route1-ID"]]}}
+        },
+        "Subnet1":{
+            "Description": "Availability zone 2A Subnet1 Id",
+            "Value": {"Ref": "Subnet1"},
+            "Export": {"Name": { "Fn::Join": ["",[{"Fn::FindInMap": ["CustomVariables", "Environment", "Value"]},"-","Subnet1-ID"]]}}
+        },
+        "Subnet2":{
+            "Description": "Availability zone 2A Subnet2 Id",
+            "Value": {"Ref": "Subnet2"},
+            "Export": {"Name": { "Fn::Join": ["",[{"Fn::FindInMap": ["CustomVariables", "Environment", "Value"]},"-","Subnet2-ID"]]}}
+        },
+        "Subnet3":{
+            "Description": "Availability zone 2A Subnet2 Id",
+            "Value": {"Ref": "Subnet3"},
+            "Export": {"Name": { "Fn::Join": ["",[{"Fn::FindInMap": ["CustomVariables", "Environment", "Value"]},"-","Subnet3-ID"]]}}
+        },
+        "VPNGateway" : {
+            "Description": "Virtual Private Gateway Id",
+            "Value": {"Ref": "VPNGateway"},
+            "Export": {"Name": { "Fn::Join": ["",[{"Fn::FindInMap": ["CustomVariables", "Environment", "Value"]},"-","VPNGateway"]]}}
+        }
+    }
+}

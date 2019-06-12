@@ -1,0 +1,8 @@
+---
+- name: Updates kafka VPC for Nonprod and Prod
+  hosts: stack
+  become: yes
+  vars:
+     git_remote_branch : "{{GIT_REMOTEBRANCH}}"
+  roles:
+    - { role: kafka/vpc}

@@ -1,0 +1,257 @@
+{
+    "AWSTemplateFormatVersion": "2010-09-09",
+    "Description": "VPC with 4 Public and 5 Private Subnets associated to 3 Routes ",
+    "Metadata": {
+        "About": {
+            "Author": {"value": "DevOps Engineering Team"},
+            "CreatedDate": {"Value": "November 15, 2017"},
+            "Contact": {"Value": "cwdsdevopsengineering@osi.ca.gov"},
+            "UpdatedDate": {"Value": "November 15, 2017"}
+        }
+    },
+    "Mappings": {
+        "CustomVariables": {
+            "EnvName": {"Value": "utility"},
+            "RegionAZNameA": {"Value":"us-west-1a"},
+            "RegionAZNameC": {"Value":"us-west-1c"},
+            "VpcCidrBlock": {"Value":"10.57.0.0/16"},
+            "PublicCidr1A": {"Value":"10.57.0.0/24"},
+		    "PublicCidr1C": {"Value":"10.57.1.0/24"},
+            "PrivateCidr1A": {"Value":"10.57.10.0/24"},
+		    "PrivateCidr1C": {"Value":"10.57.11.0/24"}
+        }
+    },
+    "Resources": {
+        "VPC": {
+          "Type": "AWS::EC2::VPC",
+          "Metadata":{
+            "Comment": "Creates VPC with CIDR Range"
+          },
+          "Properties": {
+              "EnableDnsSupport" : "true",
+              "EnableDnsHostnames" : "true",
+              "InstanceTenancy" : "default",
+              "CidrBlock": { "Fn::FindInMap": ["CustomVariables", "VpcCidrBlock", "Value"]},
+              "Tags": [
+                  {"Key": "Environment", "Value": { "Fn::FindInMap": ["CustomVariables", "EnvName", "Value"]}},
+                  {"Key": "Name", "Value": { "Fn::FindInMap": ["CustomVariables", "EnvName", "Value"]}}
+              ]
+          }
+        },
+        "PublicSubnet1A": {
+          "Type": "AWS::EC2::Subnet",
+          "Properties": {
+            "AvailabilityZone": { "Fn::FindInMap": ["CustomVariables", "RegionAZNameA", "Value"]},
+            "VpcId": { "Ref": "VPC"},
+            "CidrBlock": { "Fn::FindInMap": ["CustomVariables", "PublicCidr1A", "Value"]},
+            "Tags": [
+                {"Key": "Environment", "Value": { "Fn::FindInMap": ["CustomVariables", "EnvName", "Value"]}},
+                {"Key": "Role", "Value":"public-network"},
+                {"Key": "Name", "Value": { "Fn::Join": ["",["public-1A","-",{ "Fn::FindInMap": ["CustomVariables", "EnvName", "Value"]}]]}}
+            ]
+          }
+        },
+        "PublicSubnet1C": {
+            "Type": "AWS::EC2::Subnet",
+            "Properties": {
+                "AvailabilityZone": { "Fn::FindInMap": ["CustomVariables", "RegionAZNameC", "Value"]},
+                "VpcId": { "Ref": "VPC"},
+                "CidrBlock": { "Fn::FindInMap": ["CustomVariables", "PublicCidr1C", "Value"]},
+                "Tags": [
+                    {"Key": "Environment", "Value": { "Fn::FindInMap": ["CustomVariables", "EnvName", "Value"]}},
+                    {"Key": "Role", "Value":"public-network"},
+                    {"Key": "Name", "Value": { "Fn::Join": ["",["public-1C","-",{ "Fn::FindInMap": ["CustomVariables", "EnvName", "Value"]}]]}}
+                ]
+            }
+        },
+        "PrivateSubnet1A": {
+            "Type": "AWS::EC2::Subnet",
+            "Properties": {
+                "AvailabilityZone": { "Fn::FindInMap": ["CustomVariables", "RegionAZNameA", "Value"]},
+                "VpcId": { "Ref": "VPC"},
+                "CidrBlock": { "Fn::FindInMap": ["CustomVariables", "PrivateCidr1A", "Value"]},
+                "Tags": [
+                    {"Key": "Environment", "Value": { "Fn::FindInMap": ["CustomVariables", "EnvName", "Value"]}},
+                    {"Key": "Role", "Value":"private-network"},
+                    {"Key": "Name", "Value": { "Fn::Join": ["",["private-1A","-",{ "Fn::FindInMap": ["CustomVariables", "EnvName", "Value"]}]]}}
+                 ]
+             }
+        },
+       "PrivateSubnet1C": {
+            "Type": "AWS::EC2::Subnet",
+            "Properties": {
+                "AvailabilityZone": { "Fn::FindInMap": ["CustomVariables", "RegionAZNameC", "Value"]},
+                "VpcId": { "Ref": "VPC"},
+                "CidrBlock": { "Fn::FindInMap": ["CustomVariables", "PrivateCidr1C", "Value"]},
+                "Tags": [
+                    {"Key": "Environment", "Value": { "Fn::FindInMap": ["CustomVariables", "EnvName", "Value"]}},
+                    {"Key": "Role", "Value":"private-network"},
+                    {"Key": "Name", "Value": { "Fn::Join": ["",["private-1C","-",{ "Fn::FindInMap": ["CustomVariables", "EnvName", "Value"]}]]}}
+                 ]
+             }
+        },
+        
+        "InternetGateway": {
+          "Type": "AWS::EC2::InternetGateway",
+          "Metadata":{
+					"Comment": "Creates Internet Gateway for Public Internet facing"
+					},
+          "Properties": {
+            "Tags": [
+                    {"Key": "Environment", "Value": { "Fn::FindInMap": ["CustomVariables", "EnvName", "Value"]}},
+                    {"Key": "Role", "Value":"public-network"},
+                    {"Key": "Name", "Value": { "Fn::Join": ["",["IGW","-",{ "Fn::FindInMap": ["CustomVariables", "EnvName", "Value"]}]]}}
+                 ]
+          }
+        },
+        "AttachInternetGateway": {
+          "Type": "AWS::EC2::VPCGatewayAttachment",
+          "Metadata": {
+            "Comment": "Attach the Internet Gateway created to the Main VPC"
+          },
+          "Properties": {
+            "VpcId": {"Ref": "VPC"},
+            "InternetGatewayId": { "Ref": "InternetGateway" }
+          }
+        },
+
+        "Route1": {
+          "Type": "AWS::EC2::RouteTable",
+          "Properties": {
+            "VpcId": { "Ref": "VPC"},
+            "Tags": [
+                {"Key": "Environment", "Value": { "Fn::FindInMap": ["CustomVariables", "EnvName", "Value"]}},
+                {"Key": "Role", "Value":"public-network"},
+                {"Key": "Name", "Value": { "Fn::Join": ["",["Route1","-",{ "Fn::FindInMap": ["CustomVariables", "EnvName", "Value"]}]]}}
+             ]
+          }
+        },
+        "InternetGatewayRoute": {
+          "Type": "AWS::EC2::Route",
+          "DependsOn": "AttachInternetGateway",
+          "Properties": {
+            "RouteTableId": {"Ref": "Route1"},
+            "DestinationCidrBlock": "0.0.0.0/0",
+            "GatewayId": { "Ref": "InternetGateway" }
+          }
+        },
+        "RouteTableAssociationPublic1A": {
+          "Type": "AWS::EC2::SubnetRouteTableAssociation",
+          "Properties": {
+            "SubnetId": {"Ref": "PublicSubnet1A"},
+            "RouteTableId": {"Ref": "Route1"}
+          }
+        },
+ 
+        "RouteTableAssociationPublic1C": {
+          "Type": "AWS::EC2::SubnetRouteTableAssociation",
+          "Properties": {
+            "SubnetId": {"Ref": "PublicSubnet1C"},
+            "RouteTableId": {"Ref": "Route1"}
+          }
+        },
+
+        "NATGateway1": {
+          "DependsOn": "AttachInternetGateway",
+          "Type": "AWS::EC2::NatGateway",
+          "Metadata":{
+            "Comment": "Creates NAT Gateway to enable isntances in private subnet to connect to internet or other AWS services"
+					},
+          "Properties": {
+            "AllocationId": {"Fn::GetAtt" : ["EIP1A", "AllocationId"]},
+            "SubnetId": {"Ref" : "PublicSubnet1A"}
+          }
+        },
+        
+        "EIP1A": {
+          "Type": "AWS::EC2::EIP",
+          "Properties": {
+            "Domain": { "Fn::FindInMap": ["CustomVariables", "EnvName", "Value"]}}
+          },
+        
+        "Route2A": {
+          "Type": "AWS::EC2::RouteTable",
+          "Properties": {
+            "VpcId": { "Ref": "VPC"},
+            "Tags": [
+                {"Key": "Environment", "Value": { "Fn::FindInMap": ["CustomVariables", "EnvName", "Value"]}},
+                {"Key": "Role", "Value":"private-network"},
+                {"Key": "Name", "Value": { "Fn::Join": ["",["Route2A","-",{ "Fn::FindInMap": ["CustomVariables", "EnvName", "Value"]}]]}}
+            ]
+          }
+        },
+        
+        "NATGatewayRoute2A": {
+          "Type": "AWS::EC2::Route",
+          "Properties": {
+            "RouteTableId": { "Ref" : "Route2A" },
+            "DestinationCidrBlock": "0.0.0.0/0",
+            "NatGatewayId" : { "Ref" : "NATGateway1" }
+          }
+        },
+        
+        "RouteTableAssociationPrivate1A": {
+          "Type": "AWS::EC2::SubnetRouteTableAssociation",
+          "Properties": {
+            "SubnetId": {"Ref": "PrivateSubnet1A"},
+            "RouteTableId": {"Ref": "Route2A"}
+          }
+        },
+        "RouteTableAssociationPrivate1C": {
+          "Type": "AWS::EC2::SubnetRouteTableAssociation",
+          "Properties": {
+            "SubnetId": {"Ref": "PrivateSubnet1C"},
+            "RouteTableId": {"Ref": "Route2A"}
+          }
+        }   
+    },
+
+    "Outputs": {
+
+        "VPC": {
+            "Description": "VPC ID ",
+            "Value": {"Ref": "VPC"},
+            "Export": {"Name": { "Fn::Join": ["",[{ "Fn::FindInMap": ["CustomVariables", "EnvName", "Value"]},"-","VPC-ID"]]}}
+        },
+        "VpcCidr":{
+            "Description": "VPC Cidr Block ",
+            "Value": {"Fn::GetAtt": [ "VPC" ,"CidrBlock"]},
+            "Export": {"Name": { "Fn::Join": ["",[{ "Fn::FindInMap": ["CustomVariables", "EnvName", "Value"]},"-","CidrBlock"]]}}
+        },
+        "Route1": {
+            "Description": "Route Connected to InternetGateway",
+            "Value": {"Ref": "Route1"},
+            "Export": {"Name": { "Fn::Join": ["",[{ "Fn::FindInMap": ["CustomVariables", "EnvName", "Value"]},"-","RouteTable1-ID"]]}}
+        },
+        "NatEIP1A": {
+          "Description": "NatGateway Connected Elastic IP",
+          "Value": { "Fn::Join": ["",[{"Ref":"EIP1A"},"/","32"]]},
+          "Export": {"Name": { "Fn::Join": ["",[{ "Fn::FindInMap": ["CustomVariables", "EnvName", "Value"]},"-","NAT-EIP-1A"]]}}
+        },
+        "Route2A": {
+            "Description": "Route Connected to NAT Gateway",
+            "Value": {"Ref": "Route2A"},
+            "Export": {"Name": { "Fn::Join": ["",[{ "Fn::FindInMap": ["CustomVariables", "EnvName", "Value"]},"-","RouteTable2A-ID"]]}}
+        },
+        "PublicSubnet1A":{
+          "Description": "Subnet Connected to IGW",
+          "Value": {"Ref": "PublicSubnet1A"},
+          "Export": {"Name": { "Fn::Join": ["",[{ "Fn::FindInMap": ["CustomVariables", "EnvName", "Value"]},"-","PubSubnet1A-ID"]]}}
+        },
+        "PublicSubnet1C":{
+          "Description": "Subnet Connected to IGW",
+          "Value": {"Ref": "PublicSubnet1C"},
+          "Export": {"Name": { "Fn::Join": ["",[{ "Fn::FindInMap": ["CustomVariables", "EnvName", "Value"]},"-","PubSubnet1C-ID"]]}}
+        },
+        "PrivateSubnet1A":{
+          "Description": "Subnet Connected to Natgateway",
+          "Value": {"Ref": "PrivateSubnet1A"},
+          "Export": {"Name": { "Fn::Join": ["",[{ "Fn::FindInMap": ["CustomVariables", "EnvName", "Value"]},"-","PvtSubnet1A-ID"]]}}
+        },
+        "PrivateSubnet1C":{
+          "Description": "Subnet Connected to Natgateway",
+          "Value": {"Ref": "PrivateSubnet1C"},
+          "Export": {"Name": { "Fn::Join": ["",[{ "Fn::FindInMap": ["CustomVariables", "EnvName", "Value"]},"-","PvtSubnet1C-ID"]]}}
+        }
+    }
+}

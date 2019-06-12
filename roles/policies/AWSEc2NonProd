@@ -1,0 +1,28 @@
+{
+    "Version": "2012-10-17",
+    "Statement": [
+        {
+            "Effect": "Allow",
+            "Action": [
+                "ec2:*",
+                "ec2:DescribeAddresses",
+                "elasticloadbalancing:*",
+                "cloudwatch:*",
+                "autoscaling:*"
+            ],
+            "Resource": "*"
+        },
+        {
+            "Effect": "Deny",
+            "Action": "ec2:*",
+            "Condition": {
+                "StringEquals": {
+                    "ec2:vpc": "arn:aws:ec2:us-west-1:142152461930:vpc/vpc-e0453784"
+                }
+            },
+            "Resource": [
+                "arn:aws:ec2:us-west-1:142152461930:vpc/*"
+            ]
+        }
+    ]
+}
